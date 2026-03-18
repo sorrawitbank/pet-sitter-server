@@ -5,8 +5,8 @@
   "main": "dist/app.js",
   "scripts": {
     "build": "tsc",
-    "dev": "nodemon src/app.ts",
-    "start": "node dist/app.js",
+    "dev": "nodemon src/server.ts",
+    "start": "node dist/server.js",
     "drizzle:pull": "drizzle-kit pull"
   },
   "keywords": [],
@@ -27,6 +27,7 @@
     "express": "^5.2.1",
     "multer": "^2.0.2",
     "pg": "^8.18.0",
+    "socket.io": "^4.8.3",
     "stripe": "^20.4.1"
   },
   "devDependencies": {

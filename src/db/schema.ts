@@ -14,7 +14,7 @@ import {
   // type AnyPgColumn,
   unique,
   date,
-  // bigint,
+  bigint,
   boolean,
   vector,
   jsonb,
@@ -181,6 +181,57 @@ export const subDistricts = pgTable(
   ],
 );
 
+export const conversations = pgTable(
+  "conversations",
+  {
+    conversationId: uuid("conversation_id")
+      .defaultRandom()
+      .primaryKey()
+      .notNull(),
+    ownerUserId: uuid("owner_user_id").notNull(),
+    petSitterId: integer("pet_sitter_id").notNull(),
+    lastMessageId: uuid("last_message_id"),
+    lastMessageAt: timestamp("last_message_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_conversations_last_message_at").using(
+      "btree",
+      table.lastMessageAt.desc().nullsLast().op("timestamptz_ops"),
+    ),
+    index("idx_conversations_owner_user_id").using(
+      "btree",
+      table.ownerUserId.asc().nullsLast().op("uuid_ops"),
+    ),
+    index("idx_conversations_pet_sitter_id").using(
+      "btree",
+      table.petSitterId.asc().nullsLast().op("int4_ops"),
+    ),
+    foreignKey({
+      columns: [table.ownerUserId],
+      foreignColumns: [users.userId],
+      name: "fk_conversations_owner_user",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.petSitterId],
+      foreignColumns: [petSitters.petSitterId],
+      name: "fk_conversations_pet_sitter",
+    }).onDelete("cascade"),
+    unique("uq_conversations_owner_sitter").on(
+      table.ownerUserId,
+      table.petSitterId,
+    ),
+  ],
+);
+
 export const users = pgTable(
   "users",
   {
@@ -215,6 +266,38 @@ export const users = pgTable(
     ),
   ],
 );
+
+export const messages = pgTable("messages", {
+	messageId: uuid("message_id").defaultRandom().primaryKey().notNull(),
+	conversationId: uuid("conversation_id").notNull(),
+	senderUserId: uuid("sender_user_id").notNull(),
+	messageType: varchar("message_type", { length: 20 }).default('text').notNull(),
+	textContent: text("text_content"),
+	fileUrl: text("file_url"),
+	filePath: text("file_path"),
+	fileName: text("file_name"),
+	mimeType: text("mime_type"),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	fileSizeBytes: bigint("file_size_bytes", { mode: "number" }),
+	isDeleted: boolean("is_deleted").default(false).notNull(),
+	editedAt: timestamp("edited_at", { withTimezone: true, mode: 'string' }),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("idx_messages_conversation_created_at").using("btree", table.conversationId.asc().nullsLast().op("timestamptz_ops"), table.createdAt.asc().nullsLast().op("timestamptz_ops")),
+	index("idx_messages_sender_user_id").using("btree", table.senderUserId.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+			columns: [table.conversationId],
+			foreignColumns: [conversations.conversationId],
+			name: "fk_messages_conversation"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.senderUserId],
+			foreignColumns: [users.userId],
+			name: "fk_messages_sender_user"
+		}).onDelete("cascade"),
+	check("chk_messages_has_content", sql`(COALESCE(length(TRIM(BOTH FROM text_content)), 0) > 0) OR (file_url IS NOT NULL)`),
+	check("messages_message_type_check", sql`(message_type)::text = ANY ((ARRAY['text'::character varying, 'image'::character varying, 'mixed'::character varying, 'system'::character varying])::text[])`),
+]);
 
 export const petTypes = pgTable(
   "pet_types",
@@ -344,6 +427,51 @@ export const reviews = pgTable(
     }).onDelete("cascade"),
     unique("reviews_booking_id_key").on(table.bookingId),
     check("reviews_rating_check", sql`(rating >= 1) AND (rating <= 5)`),
+  ],
+);
+
+export const reports = pgTable(
+  "reports",
+  {
+    reportId: serial("report_id").primaryKey().notNull(),
+    reporterUserId: uuid("reporter_user_id").notNull(),
+    reportedUserId: uuid("reported_user_id").notNull(),
+    issue: text().notNull(),
+    description: text(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    resolvedAt: timestamp("resolved_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
+    cancelledAt: timestamp("cancelled_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
+    adminNote: text("admin_note"),
+    handledBy: uuid("handled_by"),
+    status: reportStatus().default("New Report").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.handledBy],
+      foreignColumns: [users.userId],
+      name: "reports_handled_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.reportedUserId],
+      foreignColumns: [users.userId],
+      name: "reports_reported_user_id_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.reporterUserId],
+      foreignColumns: [users.userId],
+      name: "reports_reporter_user_id_fkey",
+    }).onDelete("cascade"),
   ],
 );
 
@@ -759,4 +887,92 @@ export const transactions = pgTable(
     }).onDelete("cascade"),
     unique("transactions_booking_id_key").on(table.bookingId),
   ],
+);
+
+export const conversationReads = pgTable("conversation_reads", {
+	conversationId: uuid("conversation_id").notNull(),
+	userId: uuid("user_id").notNull(),
+	lastReadMessageId: uuid("last_read_message_id"),
+	lastReadAt: timestamp("last_read_at", { withTimezone: true, mode: 'string' }),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	index("idx_conversation_reads_user_id").using("btree", table.userId.asc().nullsLast().op("uuid_ops")),
+	foreignKey({
+			columns: [table.conversationId],
+			foreignColumns: [conversations.conversationId],
+			name: "fk_conversation_reads_conversation"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.lastReadMessageId],
+			foreignColumns: [messages.messageId],
+			name: "fk_conversation_reads_last_message"
+		}).onDelete("set null"),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.userId],
+			name: "fk_conversation_reads_user"
+		}).onDelete("cascade"),
+	primaryKey({ columns: [table.conversationId, table.userId], name: "conversation_reads_pkey"}),
+]);
+
+export const reports = pgTable(
+  "reports",
+  {
+    reportId: serial("report_id").primaryKey().notNull(),
+
+    reporterUserId: uuid("reporter_user_id").notNull(),
+    reportedUserId: uuid("reported_user_id").notNull(),
+
+    issue: text("issue").notNull(),
+    description: text("description"),
+
+    createdAt: timestamp("created_at", {
+      withTimezone: true,
+      mode: "string",
+    })
+      .defaultNow()
+      .notNull(),
+
+    updatedAt: timestamp("updated_at", {
+      withTimezone: true,
+      mode: "string",
+    })
+      .defaultNow()
+      .notNull(),
+
+    resolvedAt: timestamp("resolved_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
+
+    cancelledAt: timestamp("cancelled_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
+
+    adminNote: text("admin_note"),
+    handledBy: uuid("handled_by"),
+
+    status: reportStatus().default("New Report").notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.reporterUserId],
+      foreignColumns: [users.userId],
+      name: "reports_reporter_user_id_fkey",
+    }).onDelete("cascade"),
+
+    foreignKey({
+      columns: [table.reportedUserId],
+      foreignColumns: [users.userId],
+      name: "reports_reported_user_id_fkey",
+    }).onDelete("cascade"),
+
+    foreignKey({
+      columns: [table.handledBy],
+      foreignColumns: [users.userId],
+      name: "reports_handled_by_fkey",
+    }).onDelete("set null"),
+  ]
 );
