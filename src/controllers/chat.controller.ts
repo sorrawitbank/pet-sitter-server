@@ -2,7 +2,12 @@ import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import AuthService from "../services/auth.service";
 import ChatService from "../services/chat.service";
-import { AskChatbotBody } from "../types/chat";
+import {
+  AskChatbotBody,
+  ConversationIdParams,
+  FindOrCreateConversationBody,
+  RequestWithUser,
+} from "../types/chat";
 
 const ChatController = {
   askChatbot: async (req: Request<{}, {}, AskChatbotBody>, res: Response) => {
@@ -35,6 +40,64 @@ const ChatController = {
     };
 
     return res.status(200).json(answerResponse);
+  },
+  findOrCreateConversation: async (
+    req: RequestWithUser<{}, {}, FindOrCreateConversationBody>,
+    res: Response,
+  ) => {
+    const ownerUserId = req.user?.id;
+
+    if (!ownerUserId) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+
+    try {
+      const conversation = await ChatService.findOrCreateConversation(
+        ownerUserId,
+        req.body.sitterId,
+      );
+
+      return res.status(200).json(conversation);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  },
+  getConversationById: async (
+    req: RequestWithUser,
+    res: Response,
+  ) => {
+    const ownerUserId = req.user?.id;
+    const rawConversationId = (req.params as Partial<ConversationIdParams>)
+      ?.conversationId;
+    const conversationId = Array.isArray(rawConversationId)
+      ? rawConversationId[0]
+      : rawConversationId;
+
+    if (!ownerUserId) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+    if (!conversationId) {
+      return res.status(400).json({ error: "conversationId is required" });
+    }
+
+    try {
+      const conversation = await ChatService.getConversationByIdForOwner(
+        conversationId,
+        ownerUserId,
+      );
+
+      return res.status(200).json(conversation);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
   },
 };
 
