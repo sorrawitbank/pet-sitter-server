@@ -86,4 +86,10 @@ SitterRoute.delete(
   SitterController.cancelUpdateSitter,
 );
 
+SitterRoute.delete(
+  "/note",
+  [ProtectMiddleware.sitter],
+  SitterController.deleteAdminReviewSitter,
+);
+
 export default SitterRoute;

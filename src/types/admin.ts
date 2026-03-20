@@ -10,3 +10,7 @@ export interface AdminGetSittersQuery extends GetSittersQuery {
   status?: SitterStatus | Extract<UserStatus, "Banned">;
   hasPendingUpdate?: string;
 }
+
+export interface RejectUpdateSitterBody {
+  adminNote: string;
+}

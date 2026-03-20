@@ -4,7 +4,11 @@ import AppError from "../errors/AppError";
 import OwnerService from "../services/owner.service";
 import SitterService from "../services/sitter.service";
 import UserService from "../services/user.service";
-import { AdminGetOwnersQuery, AdminGetSittersQuery } from "../types/admin";
+import {
+  AdminGetOwnersQuery,
+  AdminGetSittersQuery,
+  RejectUpdateSitterBody,
+} from "../types/admin";
 import { SitterIdParams } from "../types/sitter";
 import { UserIdParams } from "../types/user";
 import ReportService from "../services/report.service";
@@ -98,11 +102,11 @@ const AdminController = {
         ? req.query.hasPendingUpdate.toLowerCase() === "true"
           ? true
           : req.query.hasPendingUpdate.toLowerCase() === "false"
-            ? false
-            : Number(req.query.hasPendingUpdate) ||
-                Number(req.query.hasPendingUpdate) === 0
-              ? Boolean(Number(req.query.hasPendingUpdate))
-              : null
+          ? false
+          : Number(req.query.hasPendingUpdate) ||
+            Number(req.query.hasPendingUpdate) === 0
+          ? Boolean(Number(req.query.hasPendingUpdate))
+          : null
         : null;
     let experience: number[] | null;
     let result;
@@ -249,7 +253,10 @@ const AdminController = {
     return res.status(200).json({ message: "Update approved successfully" });
   },
 
-  rejectUpdateSitter: async (req: Request<SitterIdParams>, res: Response) => {
+  rejectUpdateSitter: async (
+    req: Request<SitterIdParams, {}, RejectUpdateSitterBody>,
+    res: Response,
+  ) => {
     const sitterId = Number(req.params.sitterId);
     const { adminNote } = req.body;
 
@@ -364,14 +371,16 @@ const AdminController = {
       return res.status(500).json({ error: "Internal server error" });
     }
   },
+
   getReportByIdForAdmin: async (
     req: Request<{ reportId: string }>,
     res: Response,
   ) => {
     const reportId = req.params.reportId;
     try {
-      const checkingStatusReport =
-        await ReportService.getReportByIdForAdmin(reportId);
+      const checkingStatusReport = await ReportService.getReportByIdForAdmin(
+        reportId,
+      );
       if (checkingStatusReport.data[0]?.status === "New Report") {
         await ReportService.patchReportStatusByIdForAdmin(reportId, "Pending");
       }
@@ -385,6 +394,7 @@ const AdminController = {
       return res.status(500).json({ error: "Internal server error" });
     }
   },
+  
   patchReportStatusByIdForAdmin: async (
     req: Request<{ reportId: string }>,
     res: Response,

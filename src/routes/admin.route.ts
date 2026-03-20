@@ -5,7 +5,6 @@ import OwnerMiddleware from "../middlewares/owner.middleware";
 import ProtectMiddleware from "../middlewares/protect.middleware";
 import SitterMiddleware from "../middlewares/sitter.middleware";
 import UserMiddleware from "../middlewares/user.middleware";
-import SitterController from "../controllers/sitter.controller";
 
 const AdminRoute = Router();
 
@@ -65,20 +64,14 @@ AdminRoute.patch(
   AdminController.approveUpdateSitter,
 );
 
-AdminRoute.delete(
-  "/pet-sitter/reject/:sitterId",
-  [SitterMiddleware.sitterId, ProtectMiddleware.admin],
-  AdminController.rejectUpdateSitter,
-);
-
 AdminRoute.patch(
-  "/pet-sitter/:sitterId/review",
+  "/pet-sitter/reject/:sitterId",
   [
     SitterMiddleware.sitterId,
-    SitterMiddleware.adminReviewSitterBody,
+    AdminMiddleware.adminReviewSitterBody,
     ProtectMiddleware.admin,
   ],
-  SitterController.adminReviewSitter,
+  AdminController.rejectUpdateSitter,
 );
 
 AdminRoute.get(
