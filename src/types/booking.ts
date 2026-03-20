@@ -1,6 +1,11 @@
+import { ParamsDictionary } from "express-serve-static-core";
 import { User } from "@supabase/supabase-js";
 import { UserRole } from "./user";
 import { Request } from "express";
+
+export interface BookingIdParams extends ParamsDictionary {
+  bookingId: string;
+}
 
 export interface GetBookingsFilter {
   petSitterId?: number;

@@ -1,12 +1,30 @@
 import { NextFunction, Request, Response } from "express";
 import {
+  BookingIdParams,
   GetBookingsInDateRangeQuery,
-  UpdateBookingTimeParams,
   UpdateBookingTimeBody,
+  UpdateBookingTimeParams,
 } from "../types/booking";
 import { dateRegex } from "../utils/regex";
 
 const BookingMiddleware = {
+  bookingId: (
+    req: Request<BookingIdParams>,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const bookingId = req.params.bookingId;
+    const parsedBookingId = Number(bookingId);
+
+    if (!Number.isInteger(parsedBookingId) || parsedBookingId <= 0) {
+      return res.status(400).json({
+        error: "Pet ID must be a positive integer",
+      });
+    }
+
+    next();
+  },
+
   getBookingInRangeQuery: (
     req: Request<{}, {}, {}, Partial<GetBookingsInDateRangeQuery>>,
     res: Response,

@@ -47,6 +47,7 @@ const ReviewController = {
 
     return res.status(200).json(reviewsResponse);
   },
+  
   createReview: async (req: Request, res: Response) => {
     try {
       const authHeader = req.headers.authorization;
@@ -70,14 +71,14 @@ const ReviewController = {
         comment: req.body.comment,
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         message: "Review created successfully",
         data: review,
       });
     } catch (error: any) {
       console.error("createReview error:", error);
 
-      res.status(error.status || 500).json({
+      return res.status(error.status || 500).json({
         error: error.message || "Internal Server Error",
       });
     }

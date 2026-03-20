@@ -14,13 +14,13 @@ const BookingController = {
   createBooking: async (
     req: RequestWithUser,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ) => {
     try {
       const userId = req.user!.id;
       console.log("BODY:", req.body);
       console.log("USER:", userId);
-  
+
       const {
         pet_sitter_id,
         contact_name,
@@ -32,7 +32,7 @@ const BookingController = {
         note,
         pet_ids,
       } = req.body;
-  
+
       if (
         !pet_sitter_id ||
         !contact_name ||
@@ -46,7 +46,7 @@ const BookingController = {
           message: "Missing required fields",
         });
       }
-  
+
       const result = await BookingService.createBooking(userId, {
         pet_sitter_id,
         contact_name,
@@ -58,19 +58,10 @@ const BookingController = {
         note,
         pet_ids,
       });
-  
+
       return res.status(201).json(result);
     } catch (error) {
       next(error);
-    }
-  },
-  getBookings: async (req: RequestWithUser, res: Response) => {
-    try {
-      const userId = req.user!.id;
-      const result = await BookingService.getBookings(userId);
-      res.status(200).json(result);
-    } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
     }
   },
 
@@ -107,15 +98,15 @@ const BookingController = {
         await BookingService.getBookingLists(userId, query);
 
       const response = {
-        bookings,
         totalPages: totalPages,
         currentPage: currentPage,
         limit: limit,
         total: total,
+        bookings,
       };
-      res.status(200).json(response);
+      return res.status(200).json(response);
     } catch (error: any) {
-      res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: "Internal server error" });
     }
   },
 
@@ -126,7 +117,7 @@ const BookingController = {
 
       const result = await BookingService.getBookingById(bookingId, userId);
 
-      res.status(200).json(result);
+      return res.status(200).json(result);
     } catch (error: any) {
       if (error.message === "Booking not found") {
         return res.status(404).json({ message: error.message });
@@ -134,7 +125,7 @@ const BookingController = {
       if (error.message.startsWith("Forbidden")) {
         return res.status(403).json({ message: error.message });
       }
-      res.status(500).json({ message: "Internal server error" });
+      return res.status(500).json({ message: "Internal server error" });
     }
   },
 

@@ -24,26 +24,7 @@ const BookingService = {
       petIds: data.pet_ids,
     });
   },
-  getBookings: async (loggedInUserId: string) => {
-    const petSitter = await SitterRepository.getByUserId(loggedInUserId);
-    if (!petSitter) throw new AppError(404, "Pet sitter not found");
 
-    const bookings = await BookingRepository.getBookings({
-      petSitterId: petSitter.petSitterId,
-    }); //return [] (No booking)
-
-    return bookings.map((booking) => ({
-      bookingId: booking.bookingId,
-      status: booking.status,
-      startTime: booking.startTime,
-      endTime: booking.endTime,
-      totalPrice: booking.totalPrice,
-      contactName: booking.contactName,
-      contactPhone: booking.contactPhone,
-      contactEmail: booking.contactEmail,
-      note: booking.note,
-    }));
-  },
   getBookingLists: async (
     loggedInUserId: string,
     query?: GetBookingListsQuery,
@@ -56,7 +37,8 @@ const BookingService = {
         petSitterId: petSitter.petSitterId,
       },
       query,
-    ); //return [] (No booking)
+    ); // return [] (No booking)
+
     const mappedBookings = bookings.map((booking) => {
       const durationMinutes = getDurationMinutes(
         booking.bookings.startTime,
@@ -96,23 +78,32 @@ const BookingService = {
     };
   },
 
-  getBookingById: async (bookingId: number, loggedInUserId: string) => {
+  getBookingById: async (bookingId: number, userId?: string) => {
     const booking = await BookingRepository.getBookingById(bookingId);
 
     if (!booking) {
       throw new AppError(404, "Booking not found");
     }
 
-    const petSitter = await SitterRepository.getByUserId(loggedInUserId);
-    if (!petSitter) throw new AppError(404, "Pet sitter not found");
+    // If userId is provided, check if the booking is owned by the sitter
+    if (userId) {
+      const petSitter = await SitterRepository.getByUserId(userId);
 
-    const lookupBookings = await BookingRepository.getBookings({
-      petSitterId: petSitter.petSitterId,
-    });
-    const lookupBookingIds = lookupBookings.map((b) => b.bookingId);
+      if (!petSitter) throw new AppError(404, "Pet sitter not found");
 
-    if (!lookupBookingIds.includes(bookingId)) {
-      throw new AppError(404, "Booking not found or not owned by this sitter");
+      const lookupBookings = await BookingRepository.getBookingLists({
+        petSitterId: petSitter.petSitterId,
+      });
+      const lookupBookingIds = lookupBookings.bookings.map(
+        (b) => b.bookings.bookingId,
+      );
+
+      if (!lookupBookingIds.includes(bookingId)) {
+        throw new AppError(
+          404,
+          "Booking not found or not owned by this sitter",
+        );
+      }
     }
 
     const durationMinutes = getDurationMinutes(
@@ -143,12 +134,13 @@ const BookingService = {
   },
 
   getOwnerBookingHistory: async (loggedInUserId: string) => {
-    const bookings = await BookingRepository.getBookings({
+    const bookings = await BookingRepository.getBookingLists({
       petOwnerId: loggedInUserId,
     });
 
     return Promise.all(
-      bookings.map(async (booking) => {
+      bookings.bookings.map(async (b) => {
+        const booking = b.bookings;
         const full = await BookingRepository.getBookingById(booking.bookingId);
         const durationMinutes = getDurationMinutes(
           booking.startTime,
@@ -186,10 +178,12 @@ const BookingService = {
     const petSitter = await SitterRepository.getByUserId(loggedInUserId);
     if (!petSitter) throw new AppError(404, "Pet sitter not found");
 
-    const lookupBookings = await BookingRepository.getBookings({
+    const lookupBookings = await BookingRepository.getBookingLists({
       petSitterId: petSitter.petSitterId,
     });
-    const lookupBookingIds = lookupBookings.map((b) => b.bookingId);
+    const lookupBookingIds = lookupBookings.bookings.map(
+      (b) => b.bookings.bookingId,
+    );
 
     if (!lookupBookingIds.includes(bookingId)) {
       throw new AppError(404, "Booking not found or not owned by this sitter");

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import AdminController from "../controllers/admin.controller";
 import AdminMiddleware from "../middlewares/admin.middleware";
+import BookingMiddleware from "../middlewares/booking.middleware";
 import OwnerMiddleware from "../middlewares/owner.middleware";
 import ProtectMiddleware from "../middlewares/protect.middleware";
 import SitterMiddleware from "../middlewares/sitter.middleware";
@@ -47,10 +48,26 @@ AdminRoute.get(
 );
 
 AdminRoute.get(
+  "/pet-sitter/bookings/:sitterId",
+  [
+    SitterMiddleware.sitterId,
+    AdminMiddleware.getSitterBookingsOrReviewsQuery,
+    ProtectMiddleware.admin,
+  ],
+  AdminController.getBookingsBySitterId,
+);
+
+AdminRoute.get(
+  "/pet-sitter/booking/:bookingId",
+  [BookingMiddleware.bookingId, ProtectMiddleware.admin],
+  AdminController.getBookingById,
+);
+
+AdminRoute.get(
   "/pet-sitter/reviews/:sitterId",
   [
     SitterMiddleware.sitterId,
-    AdminMiddleware.getSitterReviewsQuery,
+    AdminMiddleware.getSitterBookingsOrReviewsQuery,
     ProtectMiddleware.admin,
   ],
   AdminController.getReviewsBySitterId,

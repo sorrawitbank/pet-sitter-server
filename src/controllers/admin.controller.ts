@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { Request, Response } from "express";
 import AppError from "../errors/AppError";
+import BookingService from "../services/booking.service";
 import OwnerService from "../services/owner.service";
 import ReviewService from "../services/review.service";
 import ReportService from "../services/report.service";
@@ -9,9 +10,10 @@ import UserService from "../services/user.service";
 import {
   AdminGetOwnersQuery,
   AdminGetSittersQuery,
-  GetSitterReviewsQuery,
+  GetSitterBookingsOrReviewsQuery,
   RejectUpdateSitterBody,
 } from "../types/admin";
+import { BookingIdParams } from "../types/booking";
 import { SitterIdParams } from "../types/sitter";
 import { UserIdParams } from "../types/user";
 import {
@@ -238,8 +240,74 @@ const AdminController = {
     return res.status(200).json(sitterResponse);
   },
 
+  getBookingsBySitterId: async (
+    req: Request<SitterIdParams, {}, {}, GetSitterBookingsOrReviewsQuery>,
+    res: Response,
+  ) => {
+    const sitterId = Number(req.params.sitterId);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 5;
+    let result;
+
+    try {
+      const sitter = await SitterService.getSitterById(sitterId, false);
+
+      result = await BookingService.getBookingLists(sitter.sitter.id, {
+        currentPage: page,
+        limit,
+      });
+    } catch (error) {
+      // Client error from service
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    const bookingsResponse = {
+      totalPages: result.totalPages,
+      currentPage: result.currentPage,
+      limit: result.limit,
+      total: result.total,
+      bookings: result.bookings,
+    };
+
+    return res.status(200).json(bookingsResponse);
+  },
+
+  getBookingById: async (req: Request<BookingIdParams>, res: Response) => {
+    const bookingId = Number(req.params.bookingId);
+    let result;
+
+    try {
+      result = await BookingService.getBookingById(bookingId);
+    } catch (error) {
+      // Client error from service
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    const pets = result.pets.map((pet) => ({
+      id: pet.bookingPetId,
+      petName: pet.petName,
+      petType: pet.petType,
+      imgUrl: pet.imgUrl,
+    }));
+
+    const bookingResponse = {
+      ...result,
+      pets,
+    };
+
+    return res.status(200).json(bookingResponse);
+  },
+
   getReviewsBySitterId: async (
-    req: Request<SitterIdParams, {}, {}, GetSitterReviewsQuery>,
+    req: Request<SitterIdParams, {}, {}, GetSitterBookingsOrReviewsQuery>,
     res: Response,
   ) => {
     const sitterId = Number(req.params.sitterId);

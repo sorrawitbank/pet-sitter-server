@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import {
   AdminGetOwnersQuery,
   AdminGetSittersQuery,
-  GetSitterReviewsQuery,
+  GetSitterBookingsOrReviewsQuery,
   RejectUpdateSitterBody,
 } from "../types/admin";
 import { SITTER_STATUS } from "../types/sitter";
@@ -40,8 +40,8 @@ const AdminMiddleware = {
     next();
   },
 
-  getSitterReviewsQuery: (
-    req: Request<{}, {}, {}, GetSitterReviewsQuery>,
+  getSitterBookingsOrReviewsQuery: (
+    req: Request<{}, {}, {}, GetSitterBookingsOrReviewsQuery>,
     res: Response,
     next: NextFunction,
   ) => {
