@@ -18,7 +18,7 @@ const BookingMiddleware = {
 
     if (!Number.isInteger(parsedBookingId) || parsedBookingId <= 0) {
       return res.status(400).json({
-        error: "Pet ID must be a positive integer",
+        error: "Booking ID must be a positive integer",
       });
     }
 

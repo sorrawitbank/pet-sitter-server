@@ -122,6 +122,8 @@ const BookingService = {
       contactPhone: booking.contactPhone,
       contactEmail: booking.contactEmail,
       note: booking.note,
+      updatedAt: booking.updatedAt,
+      completedAt: booking.completedAt ?? null,
       // Pet owner info
       petOwnerName: booking.petOwnerName,
       petOwnerEmail: booking.petOwnerEmail,
@@ -141,7 +143,7 @@ const BookingService = {
     return Promise.all(
       bookings.bookings.map(async (b) => {
         const booking = b.bookings;
-        const full = await BookingRepository.getBookingById(booking.bookingId);
+        const sitter = await BookingRepository.getBookingById(booking.bookingId);
         const durationMinutes = getDurationMinutes(
           booking.startTime,
           booking.endTime,
@@ -159,12 +161,15 @@ const BookingService = {
           createdAt: booking.createdAt,
           petSitterId: booking.petSitterId,
           note: booking.note,
-          tradeName: full?.tradeName ?? null,
-          sitterName: full?.sitterName ?? null,
-          sitterImgUrl: full?.sitterImgUrl ?? null,
-          sitterPhone: full?.sitterPhone ?? null,
-          pets: full?.pets ?? [],
-          review: full?.review ?? null,
+          tradeName: sitter?.tradeName ?? null,
+          sitterName: sitter?.sitterName ?? null,
+          sitterImgUrl: sitter?.sitterImgUrl ?? null,
+          sitterPhone: sitter?.sitterPhone ?? null,
+          latitude: sitter?.latitude ?? null,
+          longitude: sitter?.longitude ?? null,
+          pets: sitter?.pets ?? [],
+          review: sitter?.review ?? null,
+          completedAt: booking.completedAt ?? null,
         };
       }),
     );

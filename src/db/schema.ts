@@ -73,6 +73,10 @@ export const bookings = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
+    completedAt: timestamp("completed_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
   },
   (table) => [
     index("bookings_pet_owner_id_idx").using(

@@ -129,17 +129,17 @@ const BookingController = {
     }
   },
 
-  getOwnerBookingHistory: async (
-    req: RequestWithUser,
-    res: Response,
-    next: NextFunction,
-  ) => {
+  getOwnerBookingHistory: async (req: RequestWithUser, res: Response) => {
     try {
       const userId = req.user!.id;
       const result = await BookingService.getOwnerBookingHistory(userId);
       return res.status(200).json(result);
     } catch (error) {
-      next(error);
+      console.error("getOwnerBookingHistory:", error);
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+      return res.status(500).json({ error: "Internal server error" });
     }
   },
 
