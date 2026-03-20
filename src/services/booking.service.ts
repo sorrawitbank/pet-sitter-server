@@ -10,7 +10,7 @@ const BookingService = {
     if (new Date(data.end_time) <= new Date(data.start_time)) {
       throw new Error("End time must be after start time");
     }
-  
+
     return await BookingRepository.createBooking({
       petOwnerId: userId,
       petSitterId: data.pet_sitter_id,
@@ -170,6 +170,7 @@ const BookingService = {
           tradeName: full?.tradeName ?? null,
           sitterName: full?.sitterName ?? null,
           sitterImgUrl: full?.sitterImgUrl ?? null,
+          sitterPhone: full?.sitterPhone ?? null,
           pets: full?.pets ?? [],
           review: full?.review ?? null,
         };
