@@ -2,16 +2,18 @@ import { format } from "date-fns";
 import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import OwnerService from "../services/owner.service";
+import ReviewService from "../services/review.service";
+import ReportService from "../services/report.service";
 import SitterService from "../services/sitter.service";
 import UserService from "../services/user.service";
 import {
   AdminGetOwnersQuery,
   AdminGetSittersQuery,
+  GetSitterReviewsQuery,
   RejectUpdateSitterBody,
 } from "../types/admin";
 import { SitterIdParams } from "../types/sitter";
 import { UserIdParams } from "../types/user";
-import ReportService from "../services/report.service";
 import {
   AdminGetReportsQuery,
   AllowedReportStatus,
@@ -236,6 +238,48 @@ const AdminController = {
     return res.status(200).json(sitterResponse);
   },
 
+  getReviewsBySitterId: async (
+    req: Request<SitterIdParams, {}, {}, GetSitterReviewsQuery>,
+    res: Response,
+  ) => {
+    const sitterId = Number(req.params.sitterId);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 5;
+    let result;
+
+    try {
+      result = await ReviewService.getReviewsBySitterId(
+        sitterId,
+        page,
+        limit,
+        null,
+      );
+    } catch (error) {
+      // Client error from service
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    const reviewsResponse = {
+      totalReviews: result.totalReviews,
+      totalPages: result.totalPages,
+      currentPage: page,
+      limit: limit,
+      reviews: result.reviews.map((review) => ({
+        id: review.reviewId,
+        rating: review.rating,
+        comment: review.comment,
+        createdAt: review.createdAt,
+        reviewer: review.reviewer,
+      })),
+    };
+
+    return res.status(200).json(reviewsResponse);
+  },
+
   approveUpdateSitter: async (req: Request<SitterIdParams>, res: Response) => {
     const sitterId = Number(req.params.sitterId);
 
@@ -394,7 +438,7 @@ const AdminController = {
       return res.status(500).json({ error: "Internal server error" });
     }
   },
-  
+
   patchReportStatusByIdForAdmin: async (
     req: Request<{ reportId: string }>,
     res: Response,

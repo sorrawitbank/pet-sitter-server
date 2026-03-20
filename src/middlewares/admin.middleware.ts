@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import {
   AdminGetOwnersQuery,
   AdminGetSittersQuery,
+  GetSitterReviewsQuery,
   RejectUpdateSitterBody,
 } from "../types/admin";
 import { SITTER_STATUS } from "../types/sitter";
@@ -39,7 +40,38 @@ const AdminMiddleware = {
     next();
   },
 
-  adminReviewSitterBody: (
+  getSitterReviewsQuery: (
+    req: Request<{}, {}, {}, GetSitterReviewsQuery>,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const { page, limit } = req.query;
+    const parsedPage = Number(page);
+    const parsedlimit = Number(limit);
+
+    if (
+      !(
+        (page === undefined ||
+          (Number.isInteger(parsedPage) && parsedPage > 0)) &&
+        (limit === undefined ||
+          (Number.isInteger(parsedlimit) && parsedlimit > 0))
+      )
+    ) {
+      return res.status(400).json({
+        error: "Page and limit must be positive integers",
+      });
+    }
+
+    if (parsedlimit > 20) {
+      return res.status(400).json({
+        error: "Limit must be less than or equal to 20",
+      });
+    }
+
+    next();
+  },
+
+  reviewSitterBody: (
     req: Request<{}, {}, Partial<RejectUpdateSitterBody>>,
     res: Response,
     next: NextFunction,

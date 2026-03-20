@@ -46,6 +46,28 @@ AdminRoute.get(
   AdminController.getPendingUpdateSitterById,
 );
 
+AdminRoute.get(
+  "/pet-sitter/reviews/:sitterId",
+  [
+    SitterMiddleware.sitterId,
+    AdminMiddleware.getSitterReviewsQuery,
+    ProtectMiddleware.admin,
+  ],
+  AdminController.getReviewsBySitterId,
+);
+
+AdminRoute.get(
+  "/reports",
+  [ProtectMiddleware.admin],
+  AdminController.getReports,
+);
+
+AdminRoute.get(
+  "/reports/:reportId",
+  [ProtectMiddleware.admin],
+  AdminController.getReportByIdForAdmin,
+);
+
 AdminRoute.patch(
   "/ban/:userId",
   [UserMiddleware.userId, ProtectMiddleware.admin],
@@ -68,22 +90,10 @@ AdminRoute.patch(
   "/pet-sitter/reject/:sitterId",
   [
     SitterMiddleware.sitterId,
-    AdminMiddleware.adminReviewSitterBody,
+    AdminMiddleware.reviewSitterBody,
     ProtectMiddleware.admin,
   ],
   AdminController.rejectUpdateSitter,
-);
-
-AdminRoute.get(
-  "/reports",
-  [ProtectMiddleware.admin],
-  AdminController.getReports,
-);
-
-AdminRoute.get(
-  "/reports/:reportId",
-  [ProtectMiddleware.admin],
-  AdminController.getReportByIdForAdmin,
 );
 
 AdminRoute.patch(

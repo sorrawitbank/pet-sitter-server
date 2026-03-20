@@ -11,6 +11,11 @@ export interface AdminGetSittersQuery extends GetSittersQuery {
   hasPendingUpdate?: string;
 }
 
+export interface GetSitterReviewsQuery {
+  page?: string;
+  limit?: string;
+}
+
 export interface RejectUpdateSitterBody {
   adminNote: string;
 }
