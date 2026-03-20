@@ -1,6 +1,13 @@
 import { eq, and, ilike, count, or, desc, between } from "drizzle-orm";
 import db from "../db/db";
-import { bookings, bookingsPets, petSitters, pets, petTypes, users } from "../db/schema";
+import {
+  bookings,
+  bookingsPets,
+  petSitters,
+  pets,
+  petTypes,
+  users,
+} from "../db/schema";
 import {
   GetBookingListsQuery,
   GetBookingsFilter,
@@ -10,7 +17,6 @@ import { formatDurationLabel, getDurationMinutes } from "../utils/duration";
 import type { CreateBookingInput } from "../types/booking";
 
 import { inArray } from "drizzle-orm";
-
 
 const BookingRepository = {
   createBooking: async (data: CreateBookingInput) => {
@@ -48,14 +54,14 @@ const BookingRepository = {
             color: pet.color,
             weight: pet.weight,
             about: pet.about ?? null,
-          }))
+          })),
         );
       }
 
       return booking;
     });
   },
-  
+
   getBookings: async (filter: GetBookingsFilter) => {
     const conditions = [];
 
@@ -181,6 +187,7 @@ const BookingRepository = {
         tradeName: petSitters.tradeName,
         sitterName: users.name,
         sitterImgUrl: users.profileImgUrl,
+        sitterPhone: users.phone,
       })
       .from(petSitters)
       .innerJoin(users, eq(users.userId, petSitters.userId))
@@ -208,6 +215,7 @@ const BookingRepository = {
       tradeName: sitter?.tradeName ?? null,
       sitterName: sitter?.sitterName ?? null,
       sitterImgUrl: sitter?.sitterImgUrl ?? null,
+      sitterPhone: sitter?.sitterPhone ?? null,
       petOwnerName: petOwner?.petOwnerName ?? null,
       petOwnerEmail: petOwner?.petOwnerEmail ?? null,
       petOwnerPhone: petOwner?.petOwnerPhone ?? null,
