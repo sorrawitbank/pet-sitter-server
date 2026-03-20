@@ -7,7 +7,6 @@ import {
   GetSittersQuery,
   SitterIdParams,
   UpdateSitterBody,
-  SitterStatus,
 } from "../types/sitter";
 
 const SitterController = {
@@ -256,32 +255,29 @@ const SitterController = {
     return res.status(200).json({ message: "Cancelled successfully" });
   },
 
-  adminReviewSitter: async (
-    req: Request<
-      SitterIdParams,
-      {},
-      { status: SitterStatus; adminNote?: string }
-    >,
-    res: Response,
-  ) => {
-    const sitterId = Number(req.params.sitterId);
-    const { status, adminNote } = req.body;
+  deleteAdminReviewSitter: async (req: Request, res: Response) => {
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
 
     try {
-      await SitterService.adminReviewSitter(sitterId, status, adminNote);
+      const user = await AuthService.getUser(token);
+
+      await SitterService.deleteAdminReviewSitter(user.data.user.id);
     } catch (error) {
+      // Client error from service
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ error: error.message });
       }
-      if (error instanceof Error) {
-        return res.status(400).json({ error: error.message });
-      }
+
       return res.status(500).json({ error: "Internal server error" });
     }
 
-    return res
-      .status(200)
-      .json({ message: "Review status updated successfully" });
+    return res.status(200).json({
+      message: "Deleted Admin Review successfully",
+    });
   },
 };
 

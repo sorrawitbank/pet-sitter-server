@@ -437,6 +437,7 @@ const SitterRepository = {
     status: SitterStatus | undefined,
     hasPendingUpdate: boolean | undefined,
     imgUrls: string[] | undefined,
+    adminNote: string | null,
   ) => {
     await db.transaction(async (tx) => {
       await tx
@@ -455,6 +456,7 @@ const SitterRepository = {
           subDistrictId,
           hasPendingUpdate,
           status,
+          adminNote,
         })
         .where(eq(petSitters.petSitterId, sitterId));
 
@@ -495,25 +497,6 @@ const SitterRepository = {
     await db
       .delete(petSitterPendingUpdates)
       .where(eq(petSitterPendingUpdates.petSitterId, sitterId));
-  },
-
-  adminReviewStatus: async (
-    sitterId: number,
-    status: SitterStatus,
-    adminNote?: string | null,
-  ) => {
-    if (status === "Rejected" && !adminNote) {
-      throw new Error("Admin note is required");
-    }
-
-    return db
-      .update(petSitters)
-      .set({
-        status,
-        adminNote: status === "Approved" ? null : (adminNote ?? null),
-        hasPendingUpdate: false,
-      })
-      .where(eq(petSitters.petSitterId, sitterId));
   },
 };
 

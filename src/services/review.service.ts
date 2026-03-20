@@ -7,9 +7,9 @@ const ReviewService = {
     sitterId: number,
     page: number,
     limit: number,
-    rating: number | null
+    rating: number | null,
   ) => {
-    const sitter = await SitterRepository.getById(sitterId, true);
+    const sitter = await SitterRepository.getById(sitterId, false);
 
     if (!sitter) {
       throw new AppError(404, "Sitter not found");
@@ -19,7 +19,7 @@ const ReviewService = {
       sitterId,
       page,
       limit,
-      rating
+      rating,
     );
 
     return {
@@ -37,6 +37,7 @@ const ReviewService = {
       })),
     };
   },
+
   createReview: async ({
     userId,
     bookingId,
@@ -66,7 +67,7 @@ const ReviewService = {
 
     const booking = await ReviewRepository.findAccessibleBookingById(
       normalizedBookingId,
-      userId
+      userId,
     );
 
     if (!booking) {
@@ -78,7 +79,7 @@ const ReviewService = {
     }
 
     const existingReview = await ReviewRepository.findReviewByBookingId(
-      normalizedBookingId
+      normalizedBookingId,
     );
 
     if (existingReview) {
@@ -96,5 +97,3 @@ const ReviewService = {
 };
 
 export default ReviewService;
-
-

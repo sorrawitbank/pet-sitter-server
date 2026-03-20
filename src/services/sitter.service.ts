@@ -297,13 +297,13 @@ const SitterService = {
         longitude !== undefined ? longitude : sitter.longitude,
         provinceId !== undefined
           ? provinceId
-          : (sitter.province?.provinceId ?? null),
+          : sitter.province?.provinceId ?? null,
         districtId !== undefined
           ? districtId
-          : (sitter.district?.districtId ?? null),
+          : sitter.district?.districtId ?? null,
         subDistrictId !== undefined
           ? subDistrictId
-          : (sitter.subDistrict?.subDistrictId ?? null),
+          : sitter.subDistrict?.subDistrictId ?? null,
         finalUrls !== undefined
           ? finalUrls
           : sitter.petSitterImages.map((image) => image.imgUrl),
@@ -326,6 +326,7 @@ const SitterService = {
         sitter.status !== "Approved" ? "Waiting for approval" : undefined,
         true,
         undefined,
+        null,
       );
     } catch (error) {
       if (filePaths.length) {
@@ -374,9 +375,7 @@ const SitterService = {
       pendingSitter.description,
     );
 
-    let embeddings: number[][];
-
-    embeddings = await Promise.all(
+    const embeddings = await Promise.all(
       contents.map((content) => sentenceToVector(content)),
     );
 
@@ -403,9 +402,9 @@ const SitterService = {
       "Approved",
       false,
       pendingSitterImages,
+      null,
     );
 
-    await SitterRepository.adminReviewStatus(sitterId, "Approved", null); // 👈 clear adminNote
     await SitterRepository.deletePendingUpdate(sitterId);
 
     await DocumentRepository.deleteSitterDocument(sitterId);
@@ -445,13 +444,6 @@ const SitterService = {
       await supabaseAdmin.storage.from(bucket).remove(removedImages);
     }
 
-    const newStatus =
-      cancelBy === "admin"
-        ? "Rejected"
-        : sitter.status !== "Approved"
-          ? "Unapproved"
-          : undefined;
-
     await SitterRepository.update(
       sitterId,
       undefined,
@@ -466,39 +458,45 @@ const SitterService = {
       undefined,
       undefined,
       undefined,
-      newStatus,
+      sitter.status !== "Approved"
+        ? cancelBy === "admin"
+          ? "Rejected"
+          : "Unapproved"
+        : undefined,
       false,
       undefined,
+      cancelBy === "admin" ? adminNote ?? null : null,
     );
-
-    if (newStatus) {
-      await SitterRepository.adminReviewStatus(
-        sitterId,
-        newStatus,
-        cancelBy === "admin" ? (adminNote ?? null) : null, // 👈 set note on reject, clear on sitter cancel
-      );
-    }
 
     await SitterRepository.deletePendingUpdate(sitterId);
   },
 
-  adminReviewSitter: async (
-    sitterId: number,
-    status: SitterStatus,
-    adminNote?: string | null,
-  ) => {
-    const sitter = await SitterRepository.getById(sitterId, false);
+  deleteAdminReviewSitter: async (userId: string) => {
+    const sitter = await SitterRepository.getByUserId(userId);
 
     if (!sitter) {
-      throw new AppError(404, "Sitter not found");
+      throw new AppError(404, "Sitter not found for this user");
     }
-    if (sitter.status === "Waiting for approval") {
-      throw new AppError(
-        400,
-        "Sitter has a pending update, use approve or cancel update instead",
-      );
-    }
-    await SitterRepository.adminReviewStatus(sitterId, status, adminNote);
+
+    await SitterRepository.update(
+      sitter.petSitterId,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      null,
+    );
   },
 
   banSitter: async (userId: string) => {
@@ -535,9 +533,7 @@ const SitterService = {
       sitter.description,
     );
 
-    let embeddings: number[][];
-
-    embeddings = await Promise.all(
+    const embeddings = await Promise.all(
       contents.map((content) => sentenceToVector(content)),
     );
 

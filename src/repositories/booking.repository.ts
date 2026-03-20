@@ -175,7 +175,7 @@ const BookingRepository = {
       })
       .from(bookingsPets)
       .leftJoin(pets, eq(bookingsPets.petId, pets.petId))
-      .leftJoin(petTypes, eq(bookingsPets.petTypeId, petTypes.petTypeId))
+      .innerJoin(petTypes, eq(bookingsPets.petTypeId, petTypes.petTypeId))
       .where(eq(bookingsPets.bookingId, bookingId));
 
     const review = await db.query.reviews.findFirst({
@@ -223,6 +223,7 @@ const BookingRepository = {
       petOwnerProfileImg: petOwner?.petOwnerProfileImg ?? null,
     };
   },
+
   updateBookingStatus: async (bookingId: number, status: string) => {
     const result = await db
       .update(bookings)

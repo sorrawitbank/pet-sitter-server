@@ -5,7 +5,6 @@ import {
   UpdateSitterBody,
 } from "../types/sitter";
 import { experienceRegex, petTypeRegex } from "../utils/regex";
-import { SitterStatus } from "../types/sitter";
 
 const SitterMiddleware = {
   sitterId: (
@@ -397,43 +396,6 @@ const SitterMiddleware = {
       if (orders.length !== ordersSet.size) {
         return res.status(400).json({
           error: "Order numbers must be unique",
-        });
-      }
-    }
-
-    next();
-  },
-
-  adminReviewSitterBody: (
-    req: Request<{}, {}, { status: SitterStatus; adminNote?: string }>,
-    res: Response,
-    next: NextFunction,
-  ) => {
-    const { status, adminNote } = req.body;
-    const ADMIN_REVIEW_STATUSES: SitterStatus[] = ["Approved", "Rejected"];
-
-    if (!status || !ADMIN_REVIEW_STATUSES.includes(status)) {
-      return res.status(400).json({
-        error: `Status must be one of: ${ADMIN_REVIEW_STATUSES.join(", ")}`,
-      });
-    }
-
-    if (status === "Rejected") {
-      if (!adminNote || typeof adminNote !== "string") {
-        return res.status(400).json({
-          error: "Admin note is required when rejecting a sitter",
-        });
-      }
-
-      if (adminNote.trim().length < 10) {
-        return res.status(400).json({
-          error: "Admin note must be at least 10 characters long",
-        });
-      }
-
-      if (adminNote.trim().length > 500) {
-        return res.status(400).json({
-          error: "Admin note must be less than 500 characters",
         });
       }
     }

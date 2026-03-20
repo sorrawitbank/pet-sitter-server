@@ -1,10 +1,9 @@
 import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import ReviewService from "../services/review.service";
-import { GetReviewsQuery, ReviewItem } from "../types/review";
+import { GetReviewsQuery } from "../types/review";
 import { SitterIdParams } from "../types/sitter";
 import AuthService from "../services/auth.service";
-
 
 const ReviewController = {
   getReviewsBySitterId: async (
@@ -36,8 +35,8 @@ const ReviewController = {
       totalReviews: result.totalReviews,
       totalPages: result.totalPages,
       currentPage: page,
-      limit,
-      reviews: result.reviews.map((review: ReviewItem) => ({
+      limit: limit,
+      reviews: result.reviews.map((review) => ({
         id: review.reviewId,
         rating: review.rating,
         comment: review.comment,
@@ -47,8 +46,8 @@ const ReviewController = {
     };
 
     return res.status(200).json(reviewsResponse);
-    
   },
+  
   createReview: async (req: Request, res: Response) => {
     try {
       const authHeader = req.headers.authorization;
@@ -72,19 +71,18 @@ const ReviewController = {
         comment: req.body.comment,
       });
 
-      res.status(201).json({
+      return res.status(201).json({
         message: "Review created successfully",
         data: review,
       });
-
     } catch (error: any) {
       console.error("createReview error:", error);
 
-      res.status(error.status || 500).json({
+      return res.status(error.status || 500).json({
         error: error.message || "Internal Server Error",
       });
     }
-  }
+  },
 };
 
 export default ReviewController;

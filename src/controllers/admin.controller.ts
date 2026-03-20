@@ -1,13 +1,21 @@
 import { format } from "date-fns";
 import { Request, Response } from "express";
 import AppError from "../errors/AppError";
+import BookingService from "../services/booking.service";
 import OwnerService from "../services/owner.service";
+import ReviewService from "../services/review.service";
+import ReportService from "../services/report.service";
 import SitterService from "../services/sitter.service";
 import UserService from "../services/user.service";
-import { AdminGetOwnersQuery, AdminGetSittersQuery } from "../types/admin";
+import {
+  AdminGetOwnersQuery,
+  AdminGetSittersQuery,
+  GetSitterBookingsOrReviewsQuery,
+  RejectUpdateSitterBody,
+} from "../types/admin";
+import { BookingIdParams } from "../types/booking";
 import { SitterIdParams } from "../types/sitter";
 import { UserIdParams } from "../types/user";
-import ReportService from "../services/report.service";
 import {
   AdminGetReportsQuery,
   AllowedReportStatus,
@@ -98,11 +106,11 @@ const AdminController = {
         ? req.query.hasPendingUpdate.toLowerCase() === "true"
           ? true
           : req.query.hasPendingUpdate.toLowerCase() === "false"
-            ? false
-            : Number(req.query.hasPendingUpdate) ||
-                Number(req.query.hasPendingUpdate) === 0
-              ? Boolean(Number(req.query.hasPendingUpdate))
-              : null
+          ? false
+          : Number(req.query.hasPendingUpdate) ||
+            Number(req.query.hasPendingUpdate) === 0
+          ? Boolean(Number(req.query.hasPendingUpdate))
+          : null
         : null;
     let experience: number[] | null;
     let result;
@@ -232,6 +240,114 @@ const AdminController = {
     return res.status(200).json(sitterResponse);
   },
 
+  getBookingsBySitterId: async (
+    req: Request<SitterIdParams, {}, {}, GetSitterBookingsOrReviewsQuery>,
+    res: Response,
+  ) => {
+    const sitterId = Number(req.params.sitterId);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 5;
+    let result;
+
+    try {
+      const sitter = await SitterService.getSitterById(sitterId, false);
+
+      result = await BookingService.getBookingLists(sitter.sitter.id, {
+        currentPage: page,
+        limit,
+      });
+    } catch (error) {
+      // Client error from service
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    const bookingsResponse = {
+      totalPages: result.totalPages,
+      currentPage: result.currentPage,
+      limit: result.limit,
+      total: result.total,
+      bookings: result.bookings,
+    };
+
+    return res.status(200).json(bookingsResponse);
+  },
+
+  getBookingById: async (req: Request<BookingIdParams>, res: Response) => {
+    const bookingId = Number(req.params.bookingId);
+    let result;
+
+    try {
+      result = await BookingService.getBookingById(bookingId);
+    } catch (error) {
+      // Client error from service
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    const pets = result.pets.map((pet) => ({
+      id: pet.bookingPetId,
+      petName: pet.petName,
+      petType: pet.petType,
+      imgUrl: pet.imgUrl,
+    }));
+
+    const bookingResponse = {
+      ...result,
+      pets,
+    };
+
+    return res.status(200).json(bookingResponse);
+  },
+
+  getReviewsBySitterId: async (
+    req: Request<SitterIdParams, {}, {}, GetSitterBookingsOrReviewsQuery>,
+    res: Response,
+  ) => {
+    const sitterId = Number(req.params.sitterId);
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 5;
+    let result;
+
+    try {
+      result = await ReviewService.getReviewsBySitterId(
+        sitterId,
+        page,
+        limit,
+        null,
+      );
+    } catch (error) {
+      // Client error from service
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    const reviewsResponse = {
+      totalReviews: result.totalReviews,
+      totalPages: result.totalPages,
+      currentPage: page,
+      limit: limit,
+      reviews: result.reviews.map((review) => ({
+        id: review.reviewId,
+        rating: review.rating,
+        comment: review.comment,
+        createdAt: review.createdAt,
+        reviewer: review.reviewer,
+      })),
+    };
+
+    return res.status(200).json(reviewsResponse);
+  },
+
   approveUpdateSitter: async (req: Request<SitterIdParams>, res: Response) => {
     const sitterId = Number(req.params.sitterId);
 
@@ -249,7 +365,10 @@ const AdminController = {
     return res.status(200).json({ message: "Update approved successfully" });
   },
 
-  rejectUpdateSitter: async (req: Request<SitterIdParams>, res: Response) => {
+  rejectUpdateSitter: async (
+    req: Request<SitterIdParams, {}, RejectUpdateSitterBody>,
+    res: Response,
+  ) => {
     const sitterId = Number(req.params.sitterId);
     const { adminNote } = req.body;
 
@@ -364,14 +483,16 @@ const AdminController = {
       return res.status(500).json({ error: "Internal server error" });
     }
   },
+
   getReportByIdForAdmin: async (
     req: Request<{ reportId: string }>,
     res: Response,
   ) => {
     const reportId = req.params.reportId;
     try {
-      const checkingStatusReport =
-        await ReportService.getReportByIdForAdmin(reportId);
+      const checkingStatusReport = await ReportService.getReportByIdForAdmin(
+        reportId,
+      );
       if (checkingStatusReport.data[0]?.status === "New Report") {
         await ReportService.patchReportStatusByIdForAdmin(reportId, "Pending");
       }
@@ -385,6 +506,7 @@ const AdminController = {
       return res.status(500).json({ error: "Internal server error" });
     }
   },
+
   patchReportStatusByIdForAdmin: async (
     req: Request<{ reportId: string }>,
     res: Response,

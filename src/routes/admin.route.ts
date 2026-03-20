@@ -1,11 +1,11 @@
 import { Router } from "express";
 import AdminController from "../controllers/admin.controller";
 import AdminMiddleware from "../middlewares/admin.middleware";
+import BookingMiddleware from "../middlewares/booking.middleware";
 import OwnerMiddleware from "../middlewares/owner.middleware";
 import ProtectMiddleware from "../middlewares/protect.middleware";
 import SitterMiddleware from "../middlewares/sitter.middleware";
 import UserMiddleware from "../middlewares/user.middleware";
-import SitterController from "../controllers/sitter.controller";
 
 const AdminRoute = Router();
 
@@ -47,6 +47,44 @@ AdminRoute.get(
   AdminController.getPendingUpdateSitterById,
 );
 
+AdminRoute.get(
+  "/pet-sitter/bookings/:sitterId",
+  [
+    SitterMiddleware.sitterId,
+    AdminMiddleware.getSitterBookingsOrReviewsQuery,
+    ProtectMiddleware.admin,
+  ],
+  AdminController.getBookingsBySitterId,
+);
+
+AdminRoute.get(
+  "/pet-sitter/booking/:bookingId",
+  [BookingMiddleware.bookingId, ProtectMiddleware.admin],
+  AdminController.getBookingById,
+);
+
+AdminRoute.get(
+  "/pet-sitter/reviews/:sitterId",
+  [
+    SitterMiddleware.sitterId,
+    AdminMiddleware.getSitterBookingsOrReviewsQuery,
+    ProtectMiddleware.admin,
+  ],
+  AdminController.getReviewsBySitterId,
+);
+
+AdminRoute.get(
+  "/reports",
+  [ProtectMiddleware.admin],
+  AdminController.getReports,
+);
+
+AdminRoute.get(
+  "/reports/:reportId",
+  [ProtectMiddleware.admin],
+  AdminController.getReportByIdForAdmin,
+);
+
 AdminRoute.patch(
   "/ban/:userId",
   [UserMiddleware.userId, ProtectMiddleware.admin],
@@ -65,32 +103,14 @@ AdminRoute.patch(
   AdminController.approveUpdateSitter,
 );
 
-AdminRoute.delete(
-  "/pet-sitter/reject/:sitterId",
-  [SitterMiddleware.sitterId, ProtectMiddleware.admin],
-  AdminController.rejectUpdateSitter,
-);
-
 AdminRoute.patch(
-  "/pet-sitter/:sitterId/review",
+  "/pet-sitter/reject/:sitterId",
   [
     SitterMiddleware.sitterId,
-    SitterMiddleware.adminReviewSitterBody,
+    AdminMiddleware.reviewSitterBody,
     ProtectMiddleware.admin,
   ],
-  SitterController.adminReviewSitter,
-);
-
-AdminRoute.get(
-  "/reports",
-  [ProtectMiddleware.admin],
-  AdminController.getReports,
-);
-
-AdminRoute.get(
-  "/reports/:reportId",
-  [ProtectMiddleware.admin],
-  AdminController.getReportByIdForAdmin,
+  AdminController.rejectUpdateSitter,
 );
 
 AdminRoute.patch(
