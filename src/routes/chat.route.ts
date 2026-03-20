@@ -14,9 +14,25 @@ ChatRoute.post(
 );
 
 ChatRoute.get(
+  "/conversations",
+  [ProtectMiddleware.ownerOrSitter],
+  ChatController.getConversations,
+);
+
+ChatRoute.get(
   "/conversations/:conversationId",
   [ProtectMiddleware.owner, ChatMiddleware.conversationIdParam],
   ChatController.getConversationById,
+);
+
+ChatRoute.get(
+  "/conversations/:conversationId/messages",
+  [
+    ProtectMiddleware.ownerOrSitter,
+    ChatMiddleware.conversationIdParam,
+    ChatMiddleware.getConversationMessagesQuery,
+  ],
+  ChatController.getConversationMessagesById,
 );
 
 export default ChatRoute;

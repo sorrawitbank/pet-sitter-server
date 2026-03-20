@@ -96,6 +96,34 @@ const ChatMiddleware = {
 
     next();
   },
+  getConversationMessagesQuery: (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const rawLimit = req.query?.limit;
+    const limit = Array.isArray(rawLimit) ? rawLimit[0] : rawLimit;
+
+    if (limit === undefined) {
+      next();
+      return;
+    }
+
+    const parsedLimit = Number(limit);
+    if (!Number.isInteger(parsedLimit) || parsedLimit <= 0) {
+      return res
+        .status(400)
+        .json({ error: "limit must be a positive integer" });
+    }
+
+    if (parsedLimit > 100) {
+      return res
+        .status(400)
+        .json({ error: "limit must be less than or equal to 100" });
+    }
+
+    next();
+  },
 };
 
 export default ChatMiddleware;

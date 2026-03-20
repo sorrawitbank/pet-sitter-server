@@ -29,6 +29,10 @@ export interface ConversationIdParams {
   conversationId: string;
 }
 
+export interface GetConversationMessagesQuery {
+  limit?: string;
+}
+
 export interface AskChatbotResponse {
   query: string;
   introduction: string;
@@ -44,4 +48,21 @@ export interface ConversationResponse {
   conversationId: string;
   ownerUserId: string;
   petSitterId: number;
+}
+
+export interface ConversationListItemResponse {
+  conversationId: string;
+  name: string;
+  avatarUrl: string | null;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
+}
+
+export interface ConversationMessageResponse {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  createdAt: string;
 }

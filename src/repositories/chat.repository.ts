@@ -1,10 +1,12 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gt, ne } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import db from "../db/db";
 import {
   conversationReads,
   conversations,
   messages,
   petSitters,
+  users,
 } from "../db/schema";
 
 const ChatRepository = {
@@ -80,6 +82,53 @@ const ChatRepository = {
     return rows[0];
   },
 
+  findConversationListByOwnerUserId: async (ownerUserId: string) => {
+    const sitterUsers = alias(users, "sitter_users");
+    const lastMessages = alias(messages, "last_messages");
+
+    return await db
+      .select({
+        conversationId: conversations.conversationId,
+        updatedAt: conversations.updatedAt,
+        tradeName: petSitters.tradeName,
+        sitterName: sitterUsers.name,
+        avatarUrl: sitterUsers.profileImgUrl,
+        lastMessageText: lastMessages.textContent,
+        lastMessageType: lastMessages.messageType,
+        lastMessageImgUrl: lastMessages.imgUrl,
+        lastMessageCreatedAt: lastMessages.createdAt,
+      })
+      .from(conversations)
+      .innerJoin(petSitters, eq(petSitters.petSitterId, conversations.petSitterId))
+      .innerJoin(sitterUsers, eq(sitterUsers.userId, petSitters.userId))
+      .leftJoin(lastMessages, eq(lastMessages.messageId, conversations.lastMessageId))
+      .where(eq(conversations.ownerUserId, ownerUserId))
+      .orderBy(desc(conversations.updatedAt));
+  },
+
+  findConversationListBySitterUserId: async (sitterUserId: string) => {
+    const ownerUsers = alias(users, "owner_users");
+    const lastMessages = alias(messages, "last_messages");
+
+    return await db
+      .select({
+        conversationId: conversations.conversationId,
+        updatedAt: conversations.updatedAt,
+        ownerName: ownerUsers.name,
+        avatarUrl: ownerUsers.profileImgUrl,
+        lastMessageText: lastMessages.textContent,
+        lastMessageType: lastMessages.messageType,
+        lastMessageImgUrl: lastMessages.imgUrl,
+        lastMessageCreatedAt: lastMessages.createdAt,
+      })
+      .from(conversations)
+      .innerJoin(petSitters, eq(petSitters.petSitterId, conversations.petSitterId))
+      .innerJoin(ownerUsers, eq(ownerUsers.userId, conversations.ownerUserId))
+      .leftJoin(lastMessages, eq(lastMessages.messageId, conversations.lastMessageId))
+      .where(eq(petSitters.userId, sitterUserId))
+      .orderBy(desc(conversations.updatedAt));
+  },
+
   createMessage: async (
     conversationId: string,
     senderUserId: string,
@@ -101,13 +150,11 @@ const ChatRepository = {
   updateConversationLastMessage: async (
     conversationId: string,
     lastMessageId: string,
-    lastMessageAt: string,
   ) => {
     await db
       .update(conversations)
       .set({
         lastMessageId,
-        lastMessageAt,
         updatedAt: new Date().toISOString(),
       })
       .where(eq(conversations.conversationId, conversationId));
@@ -117,12 +164,7 @@ const ChatRepository = {
     return await db
       .select()
       .from(messages)
-      .where(
-        and(
-          eq(messages.conversationId, conversationId),
-          eq(messages.isDeleted, false),
-        ),
-      )
+      .where(eq(messages.conversationId, conversationId))
       .orderBy(desc(messages.createdAt))
       .limit(limit);
   },
@@ -154,17 +196,71 @@ const ChatRepository = {
         conversationId,
         userId,
         lastReadMessageId: messageId,
-        lastReadAt: now,
         updatedAt: now,
       })
       .onConflictDoUpdate({
         target: [conversationReads.conversationId, conversationReads.userId],
         set: {
           lastReadMessageId: messageId,
-          lastReadAt: now,
           updatedAt: now,
         },
       });
+  },
+
+  getConversationReadByConversationAndUser: async (
+    conversationId: string,
+    userId: string,
+  ) => {
+    const rows = await db
+      .select({
+        lastReadMessageId: conversationReads.lastReadMessageId,
+      })
+      .from(conversationReads)
+      .where(
+        and(
+          eq(conversationReads.conversationId, conversationId),
+          eq(conversationReads.userId, userId),
+        ),
+      )
+      .limit(1);
+
+    return rows[0];
+  },
+
+  getMessageById: async (messageId: string) => {
+    const rows = await db
+      .select({
+        messageId: messages.messageId,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .where(eq(messages.messageId, messageId))
+      .limit(1);
+
+    return rows[0];
+  },
+
+  countUnreadMessagesForUser: async (
+    conversationId: string,
+    userId: string,
+    lastReadAt?: string,
+  ) => {
+    const baseFilter = and(
+      eq(messages.conversationId, conversationId),
+      ne(messages.senderUserId, userId),
+    );
+
+    const rows = lastReadAt
+      ? await db
+          .select({ messageId: messages.messageId })
+          .from(messages)
+          .where(and(baseFilter, gt(messages.createdAt, lastReadAt)))
+      : await db
+          .select({ messageId: messages.messageId })
+          .from(messages)
+          .where(baseFilter);
+
+    return rows.length;
   },
 };
 

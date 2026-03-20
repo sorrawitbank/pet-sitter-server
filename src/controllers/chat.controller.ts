@@ -66,10 +66,29 @@ const ChatController = {
       return res.status(500).json({ error: "Internal server error" });
     }
   },
-  getConversationById: async (
-    req: RequestWithUser,
-    res: Response,
-  ) => {
+  getConversations: async (req: RequestWithUser, res: Response) => {
+    const userId = req.user?.id;
+    const role = req.user?.role;
+
+    if (!userId || !role) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+
+    try {
+      const conversations = await ChatService.getConversationListForUser(
+        userId,
+        role,
+      );
+      return res.status(200).json({ conversations });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  },
+  getConversationById: async (req: RequestWithUser, res: Response) => {
     const ownerUserId = req.user?.id;
     const rawConversationId = (req.params as Partial<ConversationIdParams>)
       ?.conversationId;
@@ -91,6 +110,44 @@ const ChatController = {
       );
 
       return res.status(200).json(conversation);
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  },
+  getConversationMessagesById: async (req: RequestWithUser, res: Response) => {
+    const userId = req.user?.id;
+    const rawConversationId = (req.params as Partial<ConversationIdParams>)
+      ?.conversationId;
+    const conversationId = Array.isArray(rawConversationId)
+      ? rawConversationId[0]
+      : rawConversationId;
+    const rawLimit = req.query?.limit;
+    const limitValue = Array.isArray(rawLimit) ? rawLimit[0] : rawLimit;
+    const limit = limitValue ? Number(limitValue) : undefined;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+    if (!conversationId) {
+      return res.status(400).json({ error: "conversationId is required" });
+    }
+
+    try {
+      const messages = await ChatService.getConversationMessagesByIdForUser(
+        conversationId,
+        userId,
+        limit,
+      );
+
+      return res.status(200).json({
+        conversationId,
+        limit: limit ?? 30,
+        messages,
+      });
     } catch (error) {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ error: error.message });

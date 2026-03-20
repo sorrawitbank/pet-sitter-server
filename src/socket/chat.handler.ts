@@ -119,7 +119,6 @@ export default function registerChatHandlers(io: Server, socket: Socket) {
       await ChatRepository.updateConversationLastMessage(
         payload.conversationId,
         insertedMessage.messageId,
-        insertedMessage.createdAt,
       );
 
       const message = toChatMessage(insertedMessage);

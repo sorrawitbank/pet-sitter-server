@@ -1,10 +1,18 @@
 import AppError from "../errors/AppError";
 import ChatRepository from "../repositories/chat.repository";
-import { AskChatbotResponse } from "../types/chat";
+import {
+  AskChatbotResponse,
+  ConversationListItemResponse,
+  ConversationMessageResponse,
+} from "../types/chat";
+import { UserRole } from "../types/user";
 import textQuery from "../chatbot/dialogflow/textQuery";
 import ragClient from "../chatbot/rag/client";
 import intentResponse from "../chatbot/response";
 import detectLanguage from "../utils/detectLanguage";
+
+const DEFAULT_MESSAGE_LIMIT = 30;
+const MAX_MESSAGE_LIMIT = 100;
 
 const ChatService = {
   askChatbot: async (query: string, topK: number, userId?: string) => {
@@ -101,6 +109,111 @@ const ChatService = {
     }
 
     return conversation;
+  },
+
+  getConversationListForUser: async (
+    userId: string,
+    role: UserRole,
+  ): Promise<ConversationListItemResponse[]> => {
+    const withUnreadCount = async <T extends { conversationId: string }>(
+      rows: T[],
+      mapper: (row: T) => Omit<ConversationListItemResponse, "unreadCount">,
+    ): Promise<ConversationListItemResponse[]> => {
+      return Promise.all(
+        rows.map(async (row) => {
+          const readState =
+            await ChatRepository.getConversationReadByConversationAndUser(
+              row.conversationId,
+              userId,
+            );
+          const lastReadMessageId = readState?.lastReadMessageId;
+          const lastReadMessage = lastReadMessageId
+            ? await ChatRepository.getMessageById(lastReadMessageId)
+            : undefined;
+          const unreadCount = await ChatRepository.countUnreadMessagesForUser(
+            row.conversationId,
+            userId,
+            lastReadMessage?.createdAt,
+          );
+
+          return {
+            ...mapper(row),
+            unreadCount,
+          };
+        }),
+      );
+    };
+
+    if (role === "owner") {
+      const rows = await ChatRepository.findConversationListByOwnerUserId(userId);
+      return withUnreadCount(rows, (row) => ({
+        conversationId: row.conversationId,
+        name: row.tradeName ?? row.sitterName ?? "Pet Sitter",
+        avatarUrl: row.avatarUrl ?? null,
+        lastMessage:
+          row.lastMessageText ??
+          (row.lastMessageType === "image" || !!row.lastMessageImgUrl
+            ? "[Image]"
+            : ""),
+        lastMessageAt: row.lastMessageCreatedAt ?? row.updatedAt,
+      }));
+    }
+
+    if (role === "sitter") {
+      const rows = await ChatRepository.findConversationListBySitterUserId(userId);
+      return withUnreadCount(rows, (row) => ({
+        conversationId: row.conversationId,
+        name: row.ownerName ?? "Pet Owner",
+        avatarUrl: row.avatarUrl ?? null,
+        lastMessage:
+          row.lastMessageText ??
+          (row.lastMessageType === "image" || !!row.lastMessageImgUrl
+            ? "[Image]"
+            : ""),
+        lastMessageAt: row.lastMessageCreatedAt ?? row.updatedAt,
+      }));
+    }
+
+    throw new AppError(403, "Forbidden: You do not have owner or pet sitter access");
+  },
+
+  getConversationMessagesByIdForUser: async (
+    conversationId: string,
+    userId: string,
+    limit?: number,
+  ): Promise<ConversationMessageResponse[]> => {
+    const access =
+      await ChatRepository.findConversationAccessById(conversationId);
+
+    if (!access) {
+      throw new AppError(404, "Conversation not found");
+    }
+
+    const hasAccess =
+      access.ownerUserId === userId || access.sitterUserId === userId;
+
+    if (!hasAccess) {
+      throw new AppError(403, "Forbidden conversation");
+    }
+
+    const requestedLimit = limit ?? DEFAULT_MESSAGE_LIMIT;
+    const normalizedLimit = Math.min(
+      Math.max(requestedLimit, 1),
+      MAX_MESSAGE_LIMIT,
+    );
+
+    const rows = await ChatRepository.getMessagesByConversationId(
+      conversationId,
+      normalizedLimit,
+    );
+
+    return rows.reverse().map((row) => ({
+      id: row.messageId,
+      conversationId: row.conversationId,
+      senderId: row.senderUserId,
+      text: row.textContent ?? "",
+      createdAt: row.createdAt,
+    }));
   },
 };
 
