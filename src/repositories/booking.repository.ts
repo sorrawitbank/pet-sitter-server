@@ -188,6 +188,8 @@ const BookingRepository = {
         sitterName: users.name,
         sitterImgUrl: users.profileImgUrl,
         sitterPhone: users.phone,
+        latitude: petSitters.latitude,
+        longitude: petSitters.longitude,
       })
       .from(petSitters)
       .innerJoin(users, eq(users.userId, petSitters.userId))
@@ -221,13 +223,20 @@ const BookingRepository = {
       petOwnerPhone: petOwner?.petOwnerPhone ?? null,
       petOwnerDateOfBirth: petOwner?.petOwnerDateOfBirth ?? null,
       petOwnerProfileImg: petOwner?.petOwnerProfileImg ?? null,
+      latitude: sitter?.latitude ?? null,
+      longitude: sitter?.longitude ?? null,
     };
   },
 
   updateBookingStatus: async (bookingId: number, status: string) => {
     const result = await db
       .update(bookings)
-      .set({ status: status as any, updatedAt: new Date().toISOString() })
+      .set({
+        status: status as any,
+        updatedAt: new Date().toISOString(),
+        completedAt:
+          status === "Success" ? new Date().toISOString() : undefined,
+      })
       .where(eq(bookings.bookingId, bookingId))
       .returning();
 
@@ -253,6 +262,7 @@ const BookingRepository = {
       .set({
         startTime,
         endTime,
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(bookings.bookingId, bookingId))
       .returning();
