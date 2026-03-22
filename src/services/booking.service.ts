@@ -4,6 +4,7 @@ import BookingRepository from "../repositories/booking.repository";
 import { GetBookingListsQuery, UpdateBookingTimeInput } from "../types/booking";
 import { formatDurationLabel, getDurationMinutes } from "../utils/duration";
 import formatBookingRange from "../utils/formatBookingRange";
+import PaymentRepository from "../repositories/payment.repository";
 
 const BookingService = {
   createBooking: async (userId: string, data: any) => {
@@ -143,7 +144,10 @@ const BookingService = {
     return Promise.all(
       bookings.bookings.map(async (b) => {
         const booking = b.bookings;
-        const sitter = await BookingRepository.getBookingById(booking.bookingId);
+        const [sitter, transaction] = await Promise.all([
+          BookingRepository.getBookingById(booking.bookingId),
+          PaymentRepository.getTransactionByBookingId(booking.bookingId),
+        ]);
         const durationMinutes = getDurationMinutes(
           booking.startTime,
           booking.endTime,
@@ -170,6 +174,8 @@ const BookingService = {
           pets: sitter?.pets ?? [],
           review: sitter?.review ?? null,
           completedAt: booking.completedAt ?? null,
+          transactionId: transaction?.transactionId ?? null,
+          paidAt: transaction?.paidAt ?? null,
         };
       }),
     );

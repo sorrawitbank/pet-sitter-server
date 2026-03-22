@@ -46,6 +46,12 @@ export const reportStatus = pgEnum("report_status", [
 ]);
 export const userRole = pgEnum("user_role", ["owner", "sitter", "admin"]);
 export const userStatus = pgEnum("user_status", ["Normal", "Banned"]);
+export const paymentMethodEnum = pgEnum("payment_method", ["cash", "card"]);
+export const transactionStatusEnum = pgEnum("transaction_status", [
+  "pending",
+  "paid",
+  "failed",
+]);
 
 export const bookings = pgTable(
   "bookings",
@@ -729,5 +735,28 @@ export const petSitterImages = pgTable(
       "pet_sitter_images_image_order_check",
       sql`(image_order >= 0) AND (image_order <= 9)`,
     ),
+  ],
+);
+
+export const transactions = pgTable(
+  "transactions",
+  {
+    transactionId: serial("transaction_id").primaryKey().notNull(),
+    bookingId: integer("booking_id").notNull(),
+    paymentMethod: paymentMethodEnum("payment_method").notNull(),
+    status: transactionStatusEnum("status").notNull().default("pending"),
+    referenceNo: varchar("reference_no", { length: 50 }),
+    paidAt: timestamp("paid_at", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.bookingId],
+      foreignColumns: [bookings.bookingId],
+      name: "transactions_booking_id_fkey",
+    }).onDelete("cascade"),
+    unique("transactions_booking_id_key").on(table.bookingId),
   ],
 );

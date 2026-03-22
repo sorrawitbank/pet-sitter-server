@@ -7,6 +7,7 @@ import {
   pets,
   petTypes,
   users,
+  transactions,
 } from "../db/schema";
 import {
   GetBookingListsQuery,
@@ -229,18 +230,35 @@ const BookingRepository = {
   },
 
   updateBookingStatus: async (bookingId: number, status: string) => {
-    const result = await db
-      .update(bookings)
-      .set({
-        status: status as any,
-        updatedAt: new Date().toISOString(),
-        completedAt:
-          status === "Success" ? new Date().toISOString() : undefined,
-      })
-      .where(eq(bookings.bookingId, bookingId))
-      .returning();
+    return await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(bookings)
+        .set({
+          status: status as any,
+          updatedAt: new Date().toISOString(),
+          completedAt:
+            status === "Success" ? new Date().toISOString() : undefined,
+        })
+        .where(eq(bookings.bookingId, bookingId))
+        .returning();
 
-    return result[0] ?? null;
+      if (status === "Success") {
+        await tx
+          .update(transactions)
+          .set({
+            status: "paid",
+            paidAt: new Date().toISOString(),
+          })
+          .where(
+            and(
+              eq(transactions.bookingId, bookingId),
+              eq(transactions.paymentMethod, "cash"),
+            ),
+          );
+      }
+
+      return updated ?? null;
+    });
   },
 
   updateBookingTime: async (
