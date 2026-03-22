@@ -11,11 +11,11 @@ import BookingRoute from "./routes/booking.route";
 import ReviewRoute from "./routes/review.route";
 import ChatRoute from "./routes/chat.route";
 import Reportroute from "./routes/report.route";
+import WebHookRoute from "./routes/webhook.route";
+import PaymentRoute from "./routes/payment.route";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-
-app.use(express.json());
 
 app.use(
   cors({
@@ -26,6 +26,10 @@ app.use(
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   }),
 );
+
+app.use("/api/webhook/stripe", WebHookRoute);
+
+app.use(express.json());
 
 app.get("/", (req, res) => {
   return res.status(200).json("Welcome to Pet Sitter Server");
@@ -45,7 +49,7 @@ app.use("/bookings", BookingRoute);
 app.use("/reviews", ReviewRoute);
 app.use("/chat", ChatRoute);
 app.use("/reports", Reportroute);
-
+app.use("/api/payment", PaymentRoute);
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   if (err) {
@@ -54,7 +58,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
       error: err.message || "Something went wrong",
     });
   }
-  
+
   next();
 });
 
