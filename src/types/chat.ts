@@ -64,5 +64,7 @@ export interface ConversationMessageResponse {
   conversationId: string;
   senderId: string;
   text: string;
+  messageType: "text" | "image";
+  imageUrl: string | null;
   createdAt: string;
 }

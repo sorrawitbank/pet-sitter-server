@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import AuthService from "../services/auth.service";
 import ChatService from "../services/chat.service";
+import { getSocketServer } from "../socket/io";
 import {
   AskChatbotBody,
   ConversationIdParams,
@@ -148,6 +149,43 @@ const ChatController = {
         limit: limit ?? 30,
         messages,
       });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  },
+  uploadConversationImage: async (req: RequestWithUser, res: Response) => {
+    const userId = req.user?.id;
+    const rawConversationId = (req.params as Partial<ConversationIdParams>)
+      ?.conversationId;
+    const conversationId = Array.isArray(rawConversationId)
+      ? rawConversationId[0]
+      : rawConversationId;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+    if (!conversationId) {
+      return res.status(400).json({ error: "conversationId is required" });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: "Image is required" });
+    }
+
+    try {
+      const message = await ChatService.createImageMessageForUser(
+        conversationId,
+        userId,
+        req.file,
+      );
+
+      const io = getSocketServer();
+      io?.to(conversationId).emit("new-message", message);
+
+      return res.status(201).json({ message });
     } catch (error) {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ error: error.message });

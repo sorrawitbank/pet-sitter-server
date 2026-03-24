@@ -27,7 +27,9 @@ function toChatMessage(row: {
   messageId: string;
   conversationId: string;
   senderUserId: string;
+  messageType: "text" | "image";
   textContent: string | null;
+  imgUrl: string | null;
   createdAt: string;
 }): ChatMessage {
   return {
@@ -35,6 +37,8 @@ function toChatMessage(row: {
     conversationId: row.conversationId,
     senderId: row.senderUserId,
     text: row.textContent ?? "",
+    messageType: row.messageType,
+    imageUrl: row.imgUrl,
     createdAt: row.createdAt,
   };
 }
@@ -110,11 +114,12 @@ export default function registerChatHandlers(io: Server, socket: Socket) {
         return;
       }
 
-      const insertedMessage = await ChatRepository.createMessage(
-        payload.conversationId,
-        userId,
-        payload.text.trim(),
-      );
+      const insertedMessage = await ChatRepository.createMessage({
+        conversationId: payload.conversationId,
+        senderUserId: userId,
+        messageType: "text",
+        textContent: payload.text.trim(),
+      });
 
       await ChatRepository.updateConversationLastMessage(
         payload.conversationId,

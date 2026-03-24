@@ -129,18 +129,21 @@ const ChatRepository = {
       .orderBy(desc(conversations.updatedAt));
   },
 
-  createMessage: async (
-    conversationId: string,
-    senderUserId: string,
-    textContent: string,
-  ) => {
+  createMessage: async (params: {
+    conversationId: string;
+    senderUserId: string;
+    messageType: "text" | "image";
+    textContent?: string | null;
+    imgUrl?: string | null;
+  }) => {
     const [insertedMessage] = await db
       .insert(messages)
       .values({
-        conversationId,
-        senderUserId,
-        messageType: "text",
-        textContent,
+        conversationId: params.conversationId,
+        senderUserId: params.senderUserId,
+        messageType: params.messageType,
+        textContent: params.textContent ?? null,
+        imgUrl: params.imgUrl ?? null,
       })
       .returning();
 
