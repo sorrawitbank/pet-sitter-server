@@ -15,7 +15,7 @@ import WebHookRoute from "./routes/webhook.route";
 import PaymentRoute from "./routes/payment.route";
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+
 
 app.use(
   cors({
@@ -62,6 +62,4 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+export default app;

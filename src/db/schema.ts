@@ -11,15 +11,12 @@ import {
   timestamp,
   numeric,
   pgPolicy,
-  // type AnyPgColumn,
   unique,
   date,
-  // bigint,
   boolean,
   vector,
   jsonb,
   primaryKey,
-  // pgView,
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -31,6 +28,7 @@ export const bookingStatus = pgEnum("booking_status", [
   "Success",
   "Canceled",
 ]);
+export const messageType = pgEnum("message_type", ["text", "image"]);
 export const petSex = pgEnum("pet_sex", ["Male", "Female", "Unknown"]);
 export const petSitterStatus = pgEnum("pet_sitter_status", [
   "Unapproved",
@@ -181,6 +179,49 @@ export const subDistricts = pgTable(
   ],
 );
 
+export const conversations = pgTable(
+  "conversations",
+  {
+    conversationId: uuid("conversation_id")
+      .defaultRandom()
+      .primaryKey()
+      .notNull(),
+    ownerUserId: uuid("owner_user_id").notNull(),
+    petSitterId: integer("pet_sitter_id").notNull(),
+    lastMessageId: uuid("last_message_id"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_conversations_owner_user_id").using(
+      "btree",
+      table.ownerUserId.asc().nullsLast().op("uuid_ops"),
+    ),
+    index("idx_conversations_pet_sitter_id").using(
+      "btree",
+      table.petSitterId.asc().nullsLast().op("int4_ops"),
+    ),
+    foreignKey({
+      columns: [table.ownerUserId],
+      foreignColumns: [users.userId],
+      name: "fk_conversations_owner_user",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.petSitterId],
+      foreignColumns: [petSitters.petSitterId],
+      name: "fk_conversations_pet_sitter",
+    }).onDelete("cascade"),
+    unique("uq_conversations_owner_sitter").on(
+      table.ownerUserId,
+      table.petSitterId,
+    ),
+  ],
+);
+
 export const users = pgTable(
   "users",
   {
@@ -213,6 +254,37 @@ export const users = pgTable(
       "users_phone_format_check",
       sql`(phone)::text ~ '^0[1-9]{1}[0-9]{8}$'::text`,
     ),
+  ],
+);
+
+export const messages = pgTable(
+  "messages",
+  {
+    messageId: uuid("message_id").defaultRandom().primaryKey().notNull(),
+    conversationId: uuid("conversation_id").notNull(),
+    senderUserId: uuid("sender_user_id").notNull(),
+    messageType: messageType("message_type").default("text").notNull(),
+    textContent: text("text_content"),
+    imgUrl: text("img_url"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_messages_sender_user_id").using(
+      "btree",
+      table.senderUserId.asc().nullsLast().op("uuid_ops"),
+    ),
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [conversations.conversationId],
+      name: "fk_messages_conversation",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.senderUserId],
+      foreignColumns: [users.userId],
+      name: "fk_messages_sender_user",
+    }).onDelete("cascade"),
   ],
 );
 
@@ -256,8 +328,8 @@ export const petSitters = pgTable(
     bankId: integer("bank_id"),
     accountNumber: varchar("account_number", { length: 30 }),
     hasPendingUpdate: boolean("has_pending_update").default(false).notNull(),
-    status: petSitterStatus().default("Unapproved").notNull(),
     adminNote: text("admin_note"),
+    status: petSitterStatus().default("Unapproved").notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
@@ -760,3 +832,42 @@ export const transactions = pgTable(
     unique("transactions_booking_id_key").on(table.bookingId),
   ],
 );
+
+export const conversationReads = pgTable(
+  "conversation_reads",
+  {
+    conversationId: uuid("conversation_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    lastReadMessageId: uuid("last_read_message_id").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("idx_conversation_reads_user_id").using(
+      "btree",
+      table.userId.asc().nullsLast().op("uuid_ops"),
+    ),
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [conversations.conversationId],
+      name: "fk_conversation_reads_conversation",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.lastReadMessageId],
+      foreignColumns: [messages.messageId],
+      name: "fk_conversation_reads_last_message",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.userId],
+      name: "fk_conversation_reads_user",
+    }).onDelete("cascade"),
+    primaryKey({
+      columns: [table.conversationId, table.userId],
+      name: "conversation_reads_pkey",
+    }),
+  ],
+);
+
+
