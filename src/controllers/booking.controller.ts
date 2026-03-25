@@ -18,8 +18,7 @@ const BookingController = {
   ) => {
     try {
       const userId = req.user!.id;
-      console.log("BODY:", req.body);
-      console.log("USER:", userId);
+
 
       const {
         pet_sitter_id,
