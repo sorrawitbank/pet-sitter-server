@@ -83,6 +83,8 @@ const AuthController = {
       email: result.data.user.email,
       name: result.user.name,
       phone: result.user.phone,
+      idNumber: result.user.idNumber,
+      dateOfBirth: result.user.dateOfBirth,
       profileImgUrl: result.user.profileImgUrl,
       role: result.user.role,
       sitterId,

@@ -33,21 +33,21 @@ const intentResponse = {
   botCapability: (language: "th" | "en") => {
     const responses = {
       th: [
-        "ดิฉันสามารถช่วยคุณ:\n- ค้นหาพี่เลี้ยงสัตว์ตามพื้นที่ 📍\n- แนะนำบริการที่เหมาะกับสัตว์เลี้ยง 🐶🐱\n- ตอบคำถามเกี่ยวกับการใช้งานระบบ\n\nลองพิมพ์: 'หาพี่เลี้ยงแมวในบางนา'",
-        "ดิฉันช่วยคุณหาพี่เลี้ยงสัตว์ได้ง่าย ๆ 😊\nแค่บอกประเภทสัตว์และพื้นที่ เช่น\n👉 'หาพี่เลี้ยงหมาในกรุงเทพ'",
+        "ดิฉันสามารถช่วยคุณ:\n- ค้นหาพี่เลี้ยงสัตว์ตามพื้นที่ 📍\n- แนะนำบริการที่เหมาะกับสัตว์เลี้ยง 🐶🐱\n\nลองพิมพ์: 'หาพี่เลี้ยงแมวในบางนา'",
+        "ดิฉันช่วยคุณหาพี่เลี้ยงสัตว์ได้ง่ายๆ 😊\nแค่บอกประเภทสัตว์และพื้นที่ เช่น\n👉 'หาพี่เลี้ยงหมาในกรุงเทพ'",
         "ดิฉันเป็นผู้ช่วยหาพี่เลี้ยงสัตว์ 🐾\nสามารถค้นหาคนดูแลสัตว์ตามความต้องการของคุณได้\n\nลองบอกดิฉันได้เลยว่าคุณต้องการอะไร",
-        "ดิฉันช่วยคุณ:\n- หาพี่เลี้ยงสัตว์ใกล้คุณ\n- แนะนำบริการต่าง ๆ\n- ตอบคำถามเกี่ยวกับระบบ\n\nเช่น 'มีพี่เลี้ยงแมวไหม'",
+        "ดิฉันช่วยคุณ:\n- หาพี่เลี้ยงสัตว์ใกล้คุณ\n- แนะนำบริการต่างๆ\n\nเช่น 'มีพี่เลี้ยงแมวไหม'",
         "ถ้าคุณกำลังหาพี่เลี้ยงสัตว์ ดิฉันช่วยได้เลย 🐶🐱\nแค่พิมพ์บอกดิฉัน เช่น 'หาพี่เลี้ยงหมาแถวบางนา'",
         "ดิฉันสามารถช่วยค้นหาพี่เลี้ยงสัตว์ให้เหมาะกับคุณได้ 🎯\nทั้งตามพื้นที่และประเภทสัตว์\n\nลองพิมพ์สิ่งที่ต้องการได้เลยค่ะ",
-        "ดิฉันช่วยให้คุณหาพี่เลี้ยงสัตว์ได้สะดวกขึ้น 😊\nไม่ว่าจะเป็นหมา แมว หรือสัตว์อื่น ๆ\n\nลองเริ่มจากบอกดิฉันว่าคุณอยู่ที่ไหน",
+        "ดิฉันช่วยให้คุณหาพี่เลี้ยงสัตว์ได้สะดวกขึ้น 😊\nไม่ว่าจะเป็นหมา แมว หรือสัตว์อื่นๆ\n\nลองเริ่มจากบอกดิฉันว่าคุณอยู่ที่ไหน",
         "ดิฉันช่วยคุณหาคนดูแลสัตว์ได้ตามที่ต้องการ 🐾\nเช่น พื้นที่ ประเภทสัตว์ หรือบริการ\n\nลองถามมาได้เลยค่ะ",
       ],
 
       en: [
-        "I can help you:\n- Find pet sitters near your location. 📍\n- Recommend services for your pet 🐶🐱\n- Answer questions about how the platform works\n\nTry: 'Find a cat sitter in Bangna'",
+        "I can help you:\n- Find pet sitters near your location. 📍\n- Recommend services for your pet 🐶🐱\n\nTry: 'Find a cat sitter in Bangna'",
         "I can help you find the perfect pet sitter. 😊\nJust tell me your pet type and location.\n👉 'Find a dog sitter in Bangkok'",
         "I'm your pet sitter assistant. 🐾\nI can help you search for sitters based on your needs.\n\nJust tell me what you're looking for.",
-        "I can:\n- Find pet sitters near you.\n- Suggest suitable services\n- Help you understand how the system works.\n\nTry asking me anything!.",
+        "I can:\n- Find pet sitters near you.\n- Suggest suitable services\n\nTry asking me anything!.",
         "Looking for a pet sitter? 🐶🐱\nI’ve got you covered!\nJust type something like 'Cat sitter in Bangna'",
         "I can help you quickly find pet sitters. 🎯\nbased on location and pet type.\n\nJust tell me what you need.",
         "I make it easy to find pet care. 😊\nWhether you have a dog, cat, or other pets.\n\nStart by telling me your location.",
