@@ -29,6 +29,7 @@ export const bookingStatus = pgEnum("booking_status", [
   "Canceled",
 ]);
 export const messageType = pgEnum("message_type", ["text", "image"]);
+export const paymentMethod = pgEnum("payment_method", ["cash", "card"]);
 export const petSex = pgEnum("pet_sex", ["Male", "Female", "Unknown"]);
 export const petSitterStatus = pgEnum("pet_sitter_status", [
   "Unapproved",
@@ -42,14 +43,13 @@ export const reportStatus = pgEnum("report_status", [
   "Resolved",
   "Canceled",
 ]);
-export const userRole = pgEnum("user_role", ["owner", "sitter", "admin"]);
-export const userStatus = pgEnum("user_status", ["Normal", "Banned"]);
-export const paymentMethodEnum = pgEnum("payment_method", ["cash", "card"]);
-export const transactionStatusEnum = pgEnum("transaction_status", [
+export const transactionStatus = pgEnum("transaction_status", [
   "pending",
   "paid",
   "failed",
 ]);
+export const userRole = pgEnum("user_role", ["owner", "sitter", "admin"]);
+export const userStatus = pgEnum("user_status", ["Normal", "Banned"]);
 
 export const bookings = pgTable(
   "bookings",
@@ -176,6 +176,36 @@ export const subDistricts = pgTable(
       to: ["public"],
       using: sql`true`,
     }),
+  ],
+);
+
+export const petSitterBanks = pgTable(
+  "pet_sitter_banks",
+  {
+    petSitterId: integer("pet_sitter_id").primaryKey().notNull(),
+    bankId: integer("bank_id"),
+    accountNumber: varchar("account_number", { length: 30 }),
+    accountName: varchar("account_name", { length: 100 }),
+    bookBankImgUrl: text("book_bank_img_url"),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("pet_sitter_banks_bank_id_idx").using(
+      "btree",
+      table.bankId.asc().nullsLast().op("int4_ops"),
+    ),
+    foreignKey({
+      columns: [table.bankId],
+      foreignColumns: [banks.bankId],
+      name: "pet_sitter_banks_bank_id_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.petSitterId],
+      foreignColumns: [petSitters.petSitterId],
+      name: "pet_sitter_banks_pet_sitter_id_fkey",
+    }).onDelete("cascade"),
   ],
 );
 
@@ -325,8 +355,6 @@ export const petSitters = pgTable(
     ratingSum: integer("rating_sum").default(0),
     ratingAvg: numeric("rating_avg", { precision: 3, scale: 2 }),
     ratingBucket: integer("rating_bucket"),
-    bankId: integer("bank_id"),
-    accountNumber: varchar("account_number", { length: 30 }),
     hasPendingUpdate: boolean("has_pending_update").default(false).notNull(),
     adminNote: text("admin_note"),
     status: petSitterStatus().default("Unapproved").notNull(),
@@ -347,11 +375,6 @@ export const petSitters = pgTable(
       "btree",
       table.subDistrictId.asc().nullsLast().op("int4_ops"),
     ),
-    foreignKey({
-      columns: [table.bankId],
-      foreignColumns: [banks.bankId],
-      name: "pet_sitters_bank_id_fkey",
-    }).onDelete("set null"),
     foreignKey({
       columns: [table.districtId],
       foreignColumns: [districts.districtId],
@@ -640,6 +663,29 @@ export const pets = pgTable(
   ],
 );
 
+export const transactions = pgTable(
+  "transactions",
+  {
+    transactionId: serial("transaction_id").primaryKey().notNull(),
+    bookingId: integer("booking_id").notNull(),
+    paymentMethod: paymentMethod("payment_method").notNull(),
+    status: transactionStatus().default("pending").notNull(),
+    referenceNo: varchar("reference_no", { length: 50 }),
+    paidAt: timestamp("paid_at", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.bookingId],
+      foreignColumns: [bookings.bookingId],
+      name: "transactions_booking_id_fkey",
+    }).onDelete("cascade"),
+    unique("transactions_booking_id_key").on(table.bookingId),
+  ],
+);
+
 export const bookingsPets = pgTable(
   "bookings_pets",
   {
@@ -766,6 +812,10 @@ export const petSitterImagePendingUpdates = pgTable(
     imgUrl: text("img_url").notNull(),
   },
   (table) => [
+    index("pet_sitter_image_pending_updates_pet_sitter_id_idx").using(
+      "btree",
+      table.petSitterId.asc().nullsLast().op("int4_ops"),
+    ),
     foreignKey({
       columns: [table.petSitterId],
       foreignColumns: [petSitterPendingUpdates.petSitterId],
@@ -810,29 +860,6 @@ export const petSitterImages = pgTable(
   ],
 );
 
-export const transactions = pgTable(
-  "transactions",
-  {
-    transactionId: serial("transaction_id").primaryKey().notNull(),
-    bookingId: integer("booking_id").notNull(),
-    paymentMethod: paymentMethodEnum("payment_method").notNull(),
-    status: transactionStatusEnum("status").notNull().default("pending"),
-    referenceNo: varchar("reference_no", { length: 50 }),
-    paidAt: timestamp("paid_at", { withTimezone: true, mode: "string" }),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => [
-    foreignKey({
-      columns: [table.bookingId],
-      foreignColumns: [bookings.bookingId],
-      name: "transactions_booking_id_fkey",
-    }).onDelete("cascade"),
-    unique("transactions_booking_id_key").on(table.bookingId),
-  ],
-);
-
 export const conversationReads = pgTable(
   "conversation_reads",
   {
@@ -869,5 +896,3 @@ export const conversationReads = pgTable(
     }),
   ],
 );
-
-

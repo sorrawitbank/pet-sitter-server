@@ -7,15 +7,21 @@ import {
   districts,
   subDistricts,
   banks,
+  petSitterBanks,
+  conversations,
+  messages,
   reviews,
+  reports,
   petSitterPendingUpdates,
   petTypes,
   pets,
+  transactions,
   bookingsPets,
   petSittersPetTypes,
   petSittersPetTypesPendingUpdates,
   petSitterImagePendingUpdates,
   petSitterImages,
+  conversationReads,
 } from "./schema";
 
 export const bookingsRelations = relations(bookings, ({ one, many }) => ({
@@ -28,21 +34,32 @@ export const bookingsRelations = relations(bookings, ({ one, many }) => ({
     references: [petSitters.petSitterId],
   }),
   reviews: many(reviews),
+  transactions: many(transactions),
   bookingsPets: many(bookingsPets),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
   bookings: many(bookings),
+  conversations: many(conversations),
+  messages: many(messages),
   petSitters: many(petSitters),
+  reports_handledBy: many(reports, {
+    relationName: "reports_handledBy_users_userId",
+  }),
+  reports_reportedUserId: many(reports, {
+    relationName: "reports_reportedUserId_users_userId",
+  }),
+  reports_reporterUserId: many(reports, {
+    relationName: "reports_reporterUserId_users_userId",
+  }),
   pets: many(pets),
+  conversationReads: many(conversationReads),
 }));
 
 export const petSittersRelations = relations(petSitters, ({ one, many }) => ({
   bookings: many(bookings),
-  bank: one(banks, {
-    fields: [petSitters.bankId],
-    references: [banks.bankId],
-  }),
+  petSitterBanks: many(petSitterBanks),
+  conversations: many(conversations),
   district: one(districts, {
     fields: [petSitters.districtId],
     references: [districts.districtId],
@@ -92,14 +109,71 @@ export const subDistrictsRelations = relations(
   }),
 );
 
+export const petSitterBanksRelations = relations(petSitterBanks, ({ one }) => ({
+  bank: one(banks, {
+    fields: [petSitterBanks.bankId],
+    references: [banks.bankId],
+  }),
+  petSitter: one(petSitters, {
+    fields: [petSitterBanks.petSitterId],
+    references: [petSitters.petSitterId],
+  }),
+}));
+
 export const banksRelations = relations(banks, ({ many }) => ({
-  petSitters: many(petSitters),
+  petSitterBanks: many(petSitterBanks),
+}));
+
+export const conversationsRelations = relations(
+  conversations,
+  ({ one, many }) => ({
+    user: one(users, {
+      fields: [conversations.ownerUserId],
+      references: [users.userId],
+    }),
+    petSitter: one(petSitters, {
+      fields: [conversations.petSitterId],
+      references: [petSitters.petSitterId],
+    }),
+    messages: many(messages),
+    conversationReads: many(conversationReads),
+  }),
+);
+
+export const messagesRelations = relations(messages, ({ one, many }) => ({
+  conversation: one(conversations, {
+    fields: [messages.conversationId],
+    references: [conversations.conversationId],
+  }),
+  user: one(users, {
+    fields: [messages.senderUserId],
+    references: [users.userId],
+  }),
+  conversationReads: many(conversationReads),
 }));
 
 export const reviewsRelations = relations(reviews, ({ one }) => ({
   booking: one(bookings, {
     fields: [reviews.bookingId],
     references: [bookings.bookingId],
+  }),
+}));
+
+export const reportsRelations = relations(reports, ({ one }) => ({
+  user_handledBy: one(users, {
+    fields: [reports.handledBy],
+    references: [users.userId],
+    relationName: "reports_handledBy_users_userId",
+  }),
+  user_reportedUserId: one(users, {
+    fields: [reports.reportedUserId],
+    references: [users.userId],
+    relationName: "reports_reportedUserId_users_userId",
+  }),
+  user_reporterUserId: one(users, {
+    fields: [reports.reporterUserId],
+    references: [users.userId],
+    relationName: "reports_reporterUserId_users_userId",
   }),
 }));
 
@@ -144,6 +218,13 @@ export const petTypesRelations = relations(petTypes, ({ many }) => ({
   bookingsPets: many(bookingsPets),
   petSittersPetTypes: many(petSittersPetTypes),
   petSittersPetTypesPendingUpdates: many(petSittersPetTypesPendingUpdates),
+}));
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+  booking: one(bookings, {
+    fields: [transactions.bookingId],
+    references: [bookings.bookingId],
+  }),
 }));
 
 export const bookingsPetsRelations = relations(bookingsPets, ({ one }) => ({
@@ -205,6 +286,24 @@ export const petSitterImagesRelations = relations(
     petSitter: one(petSitters, {
       fields: [petSitterImages.petSitterId],
       references: [petSitters.petSitterId],
+    }),
+  }),
+);
+
+export const conversationReadsRelations = relations(
+  conversationReads,
+  ({ one }) => ({
+    conversation: one(conversations, {
+      fields: [conversationReads.conversationId],
+      references: [conversations.conversationId],
+    }),
+    message: one(messages, {
+      fields: [conversationReads.lastReadMessageId],
+      references: [messages.messageId],
+    }),
+    user: one(users, {
+      fields: [conversationReads.userId],
+      references: [users.userId],
     }),
   }),
 );

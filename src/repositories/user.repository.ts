@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import db from "../db/db";
-import { petSitters, users } from "../db/schema";
+import { petSitterBanks, petSitters, users } from "../db/schema";
 import { UserRole, UserStatus } from "../types/user";
 
 const UserRepository = {
@@ -33,7 +33,14 @@ const UserRepository = {
         .returning();
 
       if (user.role === "sitter") {
-        await tx.insert(petSitters).values({ userId: user.userId });
+        const sitter = await tx
+          .insert(petSitters)
+          .values({ userId: user.userId })
+          .returning();
+
+        await tx
+          .insert(petSitterBanks)
+          .values({ petSitterId: sitter[0].petSitterId });
       }
     });
   },
