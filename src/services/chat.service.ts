@@ -267,7 +267,11 @@ const ChatService = {
     conversationId: string,
     userId: string,
     limit?: number,
-  ): Promise<ConversationMessageResponse[]> => {
+    before?: string,
+  ): Promise<{
+    messages: ConversationMessageResponse[];
+    pageInfo: { hasMore: boolean; nextBefore: string | null };
+  }> => {
     const access =
       await ChatRepository.findConversationAccessById(conversationId);
 
@@ -290,10 +294,26 @@ const ChatService = {
 
     const rows = await ChatRepository.getMessagesByConversationId(
       conversationId,
-      normalizedLimit,
+      normalizedLimit + 1,
+      before,
     );
 
-    return Promise.all(rows.reverse().map((row) => toConversationMessage(row)));
+    const hasMore = rows.length > normalizedLimit;
+    const pageRows = hasMore ? rows.slice(0, normalizedLimit) : rows;
+    const nextBefore =
+      hasMore && pageRows.length > 0 ? pageRows[pageRows.length - 1].createdAt : null;
+
+    const messages = await Promise.all(
+      pageRows.reverse().map((row) => toConversationMessage(row)),
+    );
+
+    return {
+      messages,
+      pageInfo: {
+        hasMore,
+        nextBefore,
+      },
+    };
   },
 
   createImageMessageForUser: async (

@@ -103,6 +103,18 @@ const ChatMiddleware = {
   ) => {
     const rawLimit = req.query?.limit;
     const limit = Array.isArray(rawLimit) ? rawLimit[0] : rawLimit;
+    const rawBefore = req.query?.before;
+    const before = Array.isArray(rawBefore) ? rawBefore[0] : rawBefore;
+
+    if (before !== undefined) {
+      if (typeof before !== "string") {
+        return res.status(400).json({ error: "before must be a valid datetime" });
+      }
+      const parsed = Date.parse(before);
+      if (Number.isNaN(parsed)) {
+        return res.status(400).json({ error: "before must be a valid datetime" });
+      }
+    }
 
     if (limit === undefined) {
       next();
