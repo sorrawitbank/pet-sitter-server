@@ -129,6 +129,8 @@ const ChatController = {
     const rawLimit = req.query?.limit;
     const limitValue = Array.isArray(rawLimit) ? rawLimit[0] : rawLimit;
     const limit = limitValue ? Number(limitValue) : undefined;
+    const rawBefore = req.query?.before;
+    const before = Array.isArray(rawBefore) ? rawBefore[0] : rawBefore;
 
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized: Token missing" });
@@ -138,16 +140,19 @@ const ChatController = {
     }
 
     try {
-      const messages = await ChatService.getConversationMessagesByIdForUser(
+      const result = await ChatService.getConversationMessagesByIdForUser(
         conversationId,
         userId,
         limit,
+        before,
       );
 
       return res.status(200).json({
         conversationId,
         limit: limit ?? 30,
-        messages,
+        before: before ?? null,
+        messages: result.messages,
+        pageInfo: result.pageInfo,
       });
     } catch (error) {
       if (error instanceof AppError) {

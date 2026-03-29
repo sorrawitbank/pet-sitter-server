@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, ne } from "drizzle-orm";
+import { and, desc, eq, gt, lt, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import db from "../db/db";
 import {
@@ -163,11 +163,22 @@ const ChatRepository = {
       .where(eq(conversations.conversationId, conversationId));
   },
 
-  getMessagesByConversationId: async (conversationId: string, limit: number) => {
+  getMessagesByConversationId: async (
+    conversationId: string,
+    limit: number,
+    before?: string,
+  ) => {
+    const whereFilter = before
+      ? and(
+          eq(messages.conversationId, conversationId),
+          lt(messages.createdAt, before),
+        )
+      : eq(messages.conversationId, conversationId);
+
     return await db
       .select()
       .from(messages)
-      .where(eq(messages.conversationId, conversationId))
+      .where(whereFilter)
       .orderBy(desc(messages.createdAt))
       .limit(limit);
   },

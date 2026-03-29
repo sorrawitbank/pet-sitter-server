@@ -31,6 +31,7 @@ export interface ConversationIdParams {
 
 export interface GetConversationMessagesQuery {
   limit?: string;
+  before?: string;
 }
 
 export interface AskChatbotResponse {
