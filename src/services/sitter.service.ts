@@ -163,7 +163,7 @@ const SitterService = {
   },
 
   pendingUpdateSitter: async (
-    userId: string,
+    sitterId: number,
     experience: string | null | undefined,
     tradeName: string | null | undefined,
     petTypeIds: number[] | null | undefined,
@@ -183,10 +183,10 @@ const SitterService = {
       throw new AppError(400, "Maximum number of images is 10");
     }
 
-    const sitter = await SitterRepository.getByUserId(userId);
+    const sitter = await SitterRepository.getById(sitterId, false);
 
     if (!sitter) {
-      throw new AppError(404, "Sitter not found for this user");
+      throw new AppError(404, "Sitter not found");
     }
 
     if (existingImages) {
@@ -197,8 +197,6 @@ const SitterService = {
         }
       });
     }
-
-    const sitterId = sitter.petSitterId;
 
     const lookupPending = await SitterRepository.getPendingUpdateById(sitterId);
 
@@ -219,26 +217,26 @@ const SitterService = {
     }
 
     const lookupSitter = {
-      tradeName: tradeName
+      byTradeName: tradeName
         ? await SitterRepository.getByTradeName(tradeName)
         : null,
-      pendingTradeName: tradeName
+      byPendingTradeName: tradeName
         ? await SitterRepository.getByPendingTradeName(tradeName)
         : null,
     };
 
     if (
-      (lookupSitter.tradeName &&
-        lookupSitter.tradeName.petSitterId !== sitterId) ||
-      lookupSitter.pendingTradeName
+      (lookupSitter.byTradeName &&
+        lookupSitter.byTradeName.petSitterId !== sitterId) ||
+      lookupSitter.byPendingTradeName
     ) {
       throw new AppError(400, "Sitter with this trade name already exists");
     }
 
     const filePaths: string[] = [];
-    const publicUrls: string[] = [];
 
     try {
+      const publicUrls: string[] = [];
       let finalUrls: string[] | undefined = undefined;
 
       if (files || existingImages) {
@@ -249,7 +247,7 @@ const SitterService = {
             const file = files[i];
             const ext = file.mimetype.split("/")[1];
 
-            const filePath = `${userId}/sitter-${format(
+            const filePath = `${sitter.user.userId}/sitter-${format(
               now,
               "yyyyMMddHHmmss",
             )}-${i}.${ext}`;
@@ -270,6 +268,7 @@ const SitterService = {
             const { data } = supabaseAdmin.storage
               .from(bucket)
               .getPublicUrl(filePath);
+
             publicUrls.push(data.publicUrl);
           }
         }
@@ -297,13 +296,13 @@ const SitterService = {
         longitude !== undefined ? longitude : sitter.longitude,
         provinceId !== undefined
           ? provinceId
-          : sitter.province?.provinceId ?? null,
+          : (sitter.province?.provinceId ?? null),
         districtId !== undefined
           ? districtId
-          : sitter.district?.districtId ?? null,
+          : (sitter.district?.districtId ?? null),
         subDistrictId !== undefined
           ? subDistrictId
-          : sitter.subDistrict?.subDistrictId ?? null,
+          : (sitter.subDistrict?.subDistrictId ?? null),
         finalUrls !== undefined
           ? finalUrls
           : sitter.petSitterImages.map((image) => image.imgUrl),
@@ -465,17 +464,17 @@ const SitterService = {
         : undefined,
       false,
       undefined,
-      cancelBy === "admin" ? adminNote ?? null : null,
+      cancelBy === "admin" ? (adminNote ?? null) : null,
     );
 
     await SitterRepository.deletePendingUpdate(sitterId);
   },
 
-  deleteAdminReviewSitter: async (userId: string) => {
-    const sitter = await SitterRepository.getByUserId(userId);
+  deleteAdminReviewSitter: async (sitterId: number) => {
+    const sitter = await SitterRepository.getById(sitterId, false);
 
     if (!sitter) {
-      throw new AppError(404, "Sitter not found for this user");
+      throw new AppError(404, "Sitter not found");
     }
 
     await SitterRepository.update(
@@ -499,21 +498,21 @@ const SitterService = {
     );
   },
 
-  banSitter: async (userId: string) => {
-    const sitter = await SitterRepository.getByUserId(userId);
+  banSitter: async (sitterId: number) => {
+    const sitter = await SitterRepository.getById(sitterId, false);
 
     if (!sitter) {
-      throw new AppError(404, "Sitter not found for this user");
+      throw new AppError(404, "Sitter not found");
     }
 
     await DocumentRepository.deleteSitterDocument(sitter.petSitterId);
   },
 
-  unbanSitter: async (userId: string) => {
-    const sitter = await SitterRepository.getByUserId(userId);
+  unbanSitter: async (sitterId: number) => {
+    const sitter = await SitterRepository.getById(sitterId, false);
 
     if (!sitter) {
-      throw new AppError(404, "Sitter not found for this user");
+      throw new AppError(404, "Sitter not found");
     }
 
     const metadata: DocumentMetadata = {

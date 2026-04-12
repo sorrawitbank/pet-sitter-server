@@ -3,11 +3,13 @@ import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import AuthService from "../services/auth.service";
 import SitterService from "../services/sitter.service";
+import UserService from "../services/user.service";
 import {
   GetSittersQuery,
   SitterIdParams,
   UpdateSitterBody,
 } from "../types/sitter";
+import { UpdateUserBody } from "../types/user";
 
 const SitterController = {
   getSitters: async (
@@ -176,9 +178,14 @@ const SitterController = {
       return res.status(401).json({ error: "Unauthorized: Token missing" });
     }
 
-    const body: UpdateSitterBody = JSON.parse(req.body.body);
+    const body: UpdateUserBody & UpdateSitterBody = JSON.parse(req.body.body);
 
     const {
+      name,
+      phone,
+      idNumber,
+      dateOfBirth,
+      removeProfileImg,
       experience,
       tradeName,
       petTypeIds,
@@ -194,30 +201,51 @@ const SitterController = {
       existingImages,
     } = body;
 
-    const files = req.files?.length
-      ? (req.files as Express.Multer.File[])
-      : undefined;
+    const uploaded = req.files as
+      | { profileImage?: Express.Multer.File[]; images?: Express.Multer.File[] }
+      | undefined;
+    const profileImageFile = uploaded?.profileImage?.[0];
+    const galleryFiles = uploaded?.images?.length ? uploaded.images : undefined;
 
     try {
       const user = await AuthService.getUser(token);
 
-      await SitterService.pendingUpdateSitter(
+      const sitter = await SitterService.getSitterByUserId(user.data.user.id);
+
+      await UserService.pendingUpdateUser(
         user.data.user.id,
-        typeof experience === "number" ? String(experience) : experience,
-        typeof tradeName === "string" ? tradeName.trim() : tradeName,
-        petTypeIds,
-        typeof introduction === "string" ? introduction.trim() : introduction,
-        typeof services === "string" ? services.trim() : services,
-        typeof description === "string" ? description.trim() : description,
-        typeof address === "string" ? address.trim() : address,
-        typeof latitude === "number" ? String(latitude) : latitude,
-        typeof longitude === "number" ? String(longitude) : longitude,
-        provinceId,
-        districtId,
-        subDistrictId,
-        files,
-        existingImages,
+        name,
+        phone,
+        idNumber,
+        dateOfBirth,
+        profileImageFile,
+        Boolean(removeProfileImg),
       );
+
+      try {
+        await SitterService.pendingUpdateSitter(
+          sitter.petSitterId,
+          typeof experience === "number" ? String(experience) : experience,
+          typeof tradeName === "string" ? tradeName.trim() : tradeName,
+          petTypeIds,
+          typeof introduction === "string" ? introduction.trim() : introduction,
+          typeof services === "string" ? services.trim() : services,
+          typeof description === "string" ? description.trim() : description,
+          typeof address === "string" ? address.trim() : address,
+          typeof latitude === "number" ? String(latitude) : latitude,
+          typeof longitude === "number" ? String(longitude) : longitude,
+          provinceId,
+          districtId,
+          subDistrictId,
+          galleryFiles,
+          existingImages,
+        );
+      } catch (error) {
+        // Rollback
+        await UserService.cancelUpdateUser(user.data.user.id);
+
+        throw error;
+      }
     } catch (error) {
       // Client error from service
       if (error instanceof AppError) {
@@ -265,7 +293,9 @@ const SitterController = {
     try {
       const user = await AuthService.getUser(token);
 
-      await SitterService.deleteAdminReviewSitter(user.data.user.id);
+      const sitter = await SitterService.getSitterByUserId(user.data.user.id);
+
+      await SitterService.deleteAdminReviewSitter(sitter.petSitterId);
     } catch (error) {
       // Client error from service
       if (error instanceof AppError) {
