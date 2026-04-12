@@ -318,6 +318,39 @@ export const messages = pgTable(
   ],
 );
 
+export const userPendingUpdates = pgTable(
+  "user_pending_updates",
+  {
+    userId: uuid("user_id").primaryKey().notNull(),
+    name: varchar({ length: 100 }).notNull(),
+    phone: varchar({ length: 10 }).notNull(),
+    profileImgUrl: text("profile_img_url"),
+    idNumber: varchar("id_number", { length: 13 }),
+    dateOfBirth: date("date_of_birth"),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.userId],
+      name: "user_pending_updates_user_id_fkey",
+    }).onDelete("cascade"),
+    unique("user_pending_updates_phone_key").on(table.phone),
+    unique("user_pending_updates_id_number_key").on(table.idNumber),
+    check(
+      "user_pending_updates_date_of_birth_check",
+      sql`(date_of_birth IS NULL) OR (date_of_birth <= CURRENT_DATE)`,
+    ),
+    check(
+      "user_pending_updates_id_number_format_check",
+      sql`(id_number)::text ~ '^[0-9]{13}$'::text`,
+    ),
+    check(
+      "user_pending_updates_phone_format_check",
+      sql`(phone)::text ~ '^0[1-9]{1}[0-9]{8}$'::text`,
+    ),
+  ],
+);
+
 export const petTypes = pgTable(
   "pet_types",
   {

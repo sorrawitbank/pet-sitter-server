@@ -10,6 +10,7 @@ import {
   petSitterBanks,
   conversations,
   messages,
+  userPendingUpdates,
   reviews,
   reports,
   petSitterPendingUpdates,
@@ -42,6 +43,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   bookings: many(bookings),
   conversations: many(conversations),
   messages: many(messages),
+  userPendingUpdates: many(userPendingUpdates),
   petSitters: many(petSitters),
   reports_handledBy: many(reports, {
     relationName: "reports_handledBy_users_userId",
@@ -151,6 +153,16 @@ export const messagesRelations = relations(messages, ({ one, many }) => ({
   }),
   conversationReads: many(conversationReads),
 }));
+
+export const userPendingUpdatesRelations = relations(
+  userPendingUpdates,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userPendingUpdates.userId],
+      references: [users.userId],
+    }),
+  }),
+);
 
 export const reviewsRelations = relations(reviews, ({ one }) => ({
   booking: one(bookings, {
