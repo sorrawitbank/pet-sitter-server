@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from "express";
 import { UpdateUserBody, UserIdParams } from "../types/user";
 import {
   dateRegex,
-  emailRegex,
   idNumberRegex,
   nameRegex,
   phoneRegex,
@@ -42,23 +41,14 @@ const UserMiddleware = {
       return res.status(400).json({ error: "No fields to update" });
     }
 
-    const {
-      name,
-      phone,
-      idNumber,
-      dateOfBirth,
-      email,
-      password,
-      removeProfileImg,
-    } = body;
+    const { name, phone, idNumber, dateOfBirth, removeProfileImg } = body;
 
     if (
       !(
         name !== undefined ||
         phone !== undefined ||
         idNumber !== undefined ||
-        dateOfBirth !== undefined ||
-        email !== undefined
+        dateOfBirth !== undefined
       )
     ) {
       return res.status(400).json({ error: "No fields to update" });
@@ -120,30 +110,6 @@ const UserMiddleware = {
       if (date > new Date()) {
         return res.status(400).json({
           error: "Date of birth must be in the past",
-        });
-      }
-    }
-
-    if (email !== undefined || password !== undefined) {
-      if (!email) {
-        return res.status(400).json({ error: "Email is required" });
-      }
-
-      if (!password) {
-        return res.status(400).json({ error: "Password is required" });
-      }
-
-      if (!emailRegex.test(email)) {
-        return res.status(400).json({ error: "Invalid email address" });
-      }
-
-      if (typeof password !== "string") {
-        return res.status(400).json({ error: "Password must be a string" });
-      }
-
-      if (password.length < 12) {
-        return res.status(400).json({
-          error: "Password must be at least 12 characters long",
         });
       }
     }

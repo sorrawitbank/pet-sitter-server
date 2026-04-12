@@ -3,7 +3,6 @@ import { UTCDate } from "@date-fns/utc";
 import AppError from "../errors/AppError";
 import UserRepository from "../repositories/user.repository";
 import supabaseAdmin from "../supabase/admin";
-import AuthService from "./auth.service";
 import { UserStatus } from "../types/user";
 
 const bucket = "user-assets";
@@ -20,9 +19,6 @@ const UserService = {
     idNumber: string | null | undefined,
     dateOfBirth: string | null | undefined,
     status: UserStatus | undefined,
-    oldEmail: string | undefined,
-    newEmail: string | undefined,
-    password: string | undefined,
     file: Express.Multer.File | undefined,
     removeProfileImg: boolean = false,
   ) => {
@@ -44,10 +40,6 @@ const UserService = {
 
     if (lookupUser.byIdNumber && lookupUser.byIdNumber.userId !== userId) {
       throw new AppError(400, "User with this ID number already exists");
-    }
-
-    if (oldEmail && newEmail && password) {
-      await AuthService.changeEmail(oldEmail, newEmail, password);
     }
 
     let filePath: string | undefined;

@@ -16,7 +16,5 @@ export interface UpdateUserBody {
   phone?: string;
   idNumber?: string | null;
   dateOfBirth?: string | null;
-  email?: string;
-  password?: string;
   removeProfileImg?: boolean;
 }

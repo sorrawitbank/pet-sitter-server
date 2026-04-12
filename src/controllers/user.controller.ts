@@ -14,15 +14,7 @@ const UserController = {
 
     const body: UpdateUserBody = JSON.parse(req.body.body);
 
-    const {
-      name,
-      phone,
-      idNumber,
-      dateOfBirth,
-      email,
-      password,
-      removeProfileImg,
-    } = body;
+    const { name, phone, idNumber, dateOfBirth, removeProfileImg } = body;
 
     const file = req.file;
 
@@ -36,9 +28,6 @@ const UserController = {
         idNumber,
         dateOfBirth,
         undefined,
-        user.data.user.email!,
-        email,
-        password,
         file,
         Boolean(removeProfileImg),
       );

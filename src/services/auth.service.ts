@@ -61,8 +61,6 @@ const AuthService = {
 
     if (authError) {
       throw new AppError(401, "Unauthorized or token expired");
-      // console.error("supabase authError:", authError);
-      // throw new AppError(401, authError.message);
     }
 
     let result = await UserRepository.getById(data.user.id);
@@ -84,28 +82,6 @@ const AuthService = {
     }
 
     return { user: result, data };
-  },
-
-  changeEmail: async (oldEmail: string, newEmail: string, password: string) => {
-    const { error: loginError } = await supabaseClient.auth.signInWithPassword({
-      email: oldEmail,
-      password: password,
-    });
-
-    if (loginError) {
-      throw new AppError(400, "Invalid password");
-    }
-
-    const { error: emailError } = await supabaseClient.auth.updateUser({
-      email: newEmail,
-    });
-
-    if (emailError) {
-      if (emailError.code === "email_exists") {
-        throw new AppError(400, "User with this new email already exists");
-      }
-      throw new AppError(400, emailError.message);
-    }
   },
 
   resetPassword: async (
@@ -134,6 +110,28 @@ const AuthService = {
 
     if (passwordError) {
       throw new AppError(400, passwordError.message);
+    }
+  },
+
+  changeEmail: async (oldEmail: string, newEmail: string, password: string) => {
+    const { error: loginError } = await supabaseClient.auth.signInWithPassword({
+      email: oldEmail,
+      password: password,
+    });
+
+    if (loginError) {
+      throw new AppError(400, "Invalid password");
+    }
+
+    const { error: emailError } = await supabaseClient.auth.updateUser({
+      email: newEmail,
+    });
+
+    if (emailError) {
+      if (emailError.code === "email_exists") {
+        throw new AppError(400, "User with this new email already exists");
+      }
+      throw new AppError(400, emailError.message);
     }
   },
 };

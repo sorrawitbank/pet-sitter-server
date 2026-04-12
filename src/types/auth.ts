@@ -14,3 +14,8 @@ export interface ResetPasswordBody {
   oldPassword: string;
   newPassword: string;
 }
+
+export interface ChangeEmailBody {
+  email: string;
+  password: string;
+}
