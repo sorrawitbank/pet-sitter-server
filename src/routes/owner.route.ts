@@ -1,6 +1,6 @@
 import { Router } from "express";
 import PetController from "../controllers/pet.controller";
-import UserController from "../controllers/user.controller";
+import OwnerController from "../controllers/owner.controller";
 import PetMiddleware from "../middlewares/pet.middleware";
 import ProtectMiddleware from "../middlewares/protect.middleware";
 import UploadMiddleware from "../middlewares/upload.middleware";
@@ -39,13 +39,13 @@ OwnerRoute.put(
 );
 
 OwnerRoute.put(
-  "/user",
+  "/profile",
   [
     UploadMiddleware.image.single("image"),
     UserMiddleware.updateUserBody,
     ProtectMiddleware.owner,
   ],
-  UserController.updateUser,
+  OwnerController.updateOwner,
 );
 
 OwnerRoute.delete(
