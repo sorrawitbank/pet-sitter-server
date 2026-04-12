@@ -19,7 +19,7 @@ OwnerRoute.get(
 OwnerRoute.post(
   "/pet",
   [
-    UploadMiddleware.image.single("image"),
+    UploadMiddleware.singleImage("image"),
     UploadMiddleware.requireFile("image"),
     PetMiddleware.createPetBody,
     ProtectMiddleware.owner,
@@ -30,7 +30,7 @@ OwnerRoute.post(
 OwnerRoute.put(
   "/pet/:petId",
   [
-    UploadMiddleware.image.single("image"),
+    UploadMiddleware.singleImage("image"),
     PetMiddleware.petId,
     PetMiddleware.updatePetBody,
     ProtectMiddleware.owner,
@@ -41,7 +41,7 @@ OwnerRoute.put(
 OwnerRoute.put(
   "/profile",
   [
-    UploadMiddleware.image.single("image"),
+    UploadMiddleware.singleImage("image"),
     UserMiddleware.updateUserBody,
     ProtectMiddleware.owner,
   ],
