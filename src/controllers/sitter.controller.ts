@@ -214,7 +214,7 @@ const SitterController = {
 
       await UserService.pendingUpdateUser(
         user.data.user.id,
-        name,
+        typeof name === "string" ? name.trim() : name,
         phone,
         idNumber,
         dateOfBirth,
@@ -269,6 +269,8 @@ const SitterController = {
       const user = await AuthService.getUser(token);
 
       const sitter = await SitterService.getSitterByUserId(user.data.user.id);
+
+      await UserService.cancelUpdateUser(user.data.user.id);
 
       await SitterService.cancelUpdateSitter(sitter.petSitterId, "sitter");
     } catch (error) {
