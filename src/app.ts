@@ -16,7 +16,6 @@ import PaymentRoute from "./routes/payment.route";
 
 const app = express();
 
-
 app.use(
   cors({
     origin: [
@@ -26,8 +25,6 @@ app.use(
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   }),
 );
-
-app.use("/api/webhook/stripe", WebHookRoute);
 
 app.use(express.json());
 
@@ -39,17 +36,18 @@ app.get("/health", (req, res) => {
   return res.status(200).json({ status: "OK", timestamp: new Date() });
 });
 
-app.use("/auth", AuthRoute);
-app.use("/pet", PetRoute);
-app.use("/pet-owner", OwnerRoute);
-app.use("/pet-sitter", SitterRoute);
-app.use("/admin", AdminRoute);
-app.use("/address", AddressRoute);
-app.use("/bookings", BookingRoute);
-app.use("/reviews", ReviewRoute);
-app.use("/chat", ChatRoute);
-app.use("/reports", Reportroute);
+app.use("/api/auth", AuthRoute);
+app.use("/api/pet", PetRoute);
+app.use("/api/pet-owner", OwnerRoute);
+app.use("/api/pet-sitter", SitterRoute);
+app.use("/api/admin", AdminRoute);
+app.use("/api/address", AddressRoute);
+app.use("/api/bookings", BookingRoute);
+app.use("/api/reviews", ReviewRoute);
+app.use("/api/chat", ChatRoute);
+app.use("/api/reports", Reportroute);
 app.use("/api/payment", PaymentRoute);
+app.use("/api/webhook/stripe", WebHookRoute);
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   if (err) {
