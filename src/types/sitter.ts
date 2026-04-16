@@ -22,6 +22,9 @@ export interface GetSittersQuery {
   pet_type?: string;
   rating?: string;
   experience?: string;
+  lat?: string;
+  lon?: string;
+  radius?: string;
 }
 
 export interface UpdateSitterBody {

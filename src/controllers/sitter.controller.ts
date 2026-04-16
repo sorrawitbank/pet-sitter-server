@@ -2,7 +2,9 @@ import { format } from "date-fns";
 import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import AuthService from "../services/auth.service";
-import SitterService from "../services/sitter.service";
+import SitterService, {
+  getSittersByLocation,
+} from "../services/sitter.service";
 import UserService from "../services/user.service";
 import {
   GetSittersQuery,
@@ -22,8 +24,17 @@ const SitterController = {
     const keyword = req.query.keyword ? req.query.keyword.trim() : null;
     const petType = req.query.pet_type ? req.query.pet_type.split(",") : null;
     const rating = Number(req.query.rating) || null;
+    const lat = req.query.lat !== undefined ? Number(req.query.lat) : null;
+    const lon = req.query.lon !== undefined ? Number(req.query.lon) : null;
+    const radius =
+      req.query.radius !== undefined ? Number(req.query.radius) : null;
+    const isLocationSearch = lat !== null && lon !== null;
     let experience: number[] | null;
-    let result;
+    let result:
+      | Awaited<ReturnType<typeof SitterService.getSitters>>
+      | Awaited<ReturnType<typeof getSittersByLocation>>;
+    let locationMeta: Awaited<ReturnType<typeof getSittersByLocation>> | null =
+      null;
 
     if (req.query.experience) {
       experience = req.query.experience.split("-").map(Number);
@@ -37,18 +48,36 @@ const SitterController = {
     }
 
     try {
-      result = await SitterService.getSitters(
-        seed,
-        page,
-        limit,
-        keyword,
-        petType,
-        rating,
-        experience,
-        null,
-        "Approved",
-      );
-    } catch {
+      if (!isLocationSearch) {
+        result = await SitterService.getSitters(
+          seed,
+          page,
+          limit,
+          keyword,
+          petType,
+          rating,
+          experience,
+          null,
+          "Approved",
+        );
+      } else {
+        locationMeta = await getSittersByLocation(
+          page,
+          limit,
+          keyword,
+          petType,
+          rating,
+          experience,
+          null,
+          "Approved",
+          lat,
+          lon,
+          radius,
+        );
+        result = locationMeta;
+      }
+    } catch (error) {
+      console.error("getSitters failed", error);
       return res.status(500).json({ error: "Internal server error" });
     }
 
@@ -73,6 +102,14 @@ const SitterController = {
           district: petSitter.district,
         };
       }),
+      ...(isLocationSearch && locationMeta
+        ? {
+            meta: {
+              radiusUsed: locationMeta.radiusUsed,
+              hasMore: locationMeta.hasMore,
+            },
+          }
+        : {}),
     };
 
     return res.status(200).json(sittersResponse);
