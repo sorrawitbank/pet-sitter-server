@@ -1,6 +1,6 @@
 import { Router } from "express";
 import PetController from "../controllers/pet.controller";
-import UserController from "../controllers/user.controller";
+import OwnerController from "../controllers/owner.controller";
 import PetMiddleware from "../middlewares/pet.middleware";
 import ProtectMiddleware from "../middlewares/protect.middleware";
 import UploadMiddleware from "../middlewares/upload.middleware";
@@ -19,7 +19,7 @@ OwnerRoute.get(
 OwnerRoute.post(
   "/pet",
   [
-    UploadMiddleware.image.single("image"),
+    UploadMiddleware.singleImage("image"),
     UploadMiddleware.requireFile("image"),
     PetMiddleware.createPetBody,
     ProtectMiddleware.owner,
@@ -30,7 +30,7 @@ OwnerRoute.post(
 OwnerRoute.put(
   "/pet/:petId",
   [
-    UploadMiddleware.image.single("image"),
+    UploadMiddleware.singleImage("image"),
     PetMiddleware.petId,
     PetMiddleware.updatePetBody,
     ProtectMiddleware.owner,
@@ -39,13 +39,13 @@ OwnerRoute.put(
 );
 
 OwnerRoute.put(
-  "/user",
+  "/profile",
   [
-    UploadMiddleware.image.single("image"),
+    UploadMiddleware.singleImage("image"),
     UserMiddleware.updateUserBody,
     ProtectMiddleware.owner,
   ],
-  UserController.updateUser,
+  OwnerController.updateOwner,
 );
 
 OwnerRoute.delete(

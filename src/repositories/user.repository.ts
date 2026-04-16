@@ -1,6 +1,11 @@
 import { eq } from "drizzle-orm";
 import db from "../db/db";
-import { petSitterBanks, petSitters, users } from "../db/schema";
+import {
+  petSitterBanks,
+  petSitters,
+  userPendingUpdates,
+  users,
+} from "../db/schema";
 import { UserRole, UserStatus } from "../types/user";
 
 const UserRepository = {
@@ -15,6 +20,33 @@ const UserRepository = {
   getByIdNumber: async (idNumber: string) => {
     return (
       await db.select().from(users).where(eq(users.idNumber, idNumber))
+    )[0];
+  },
+
+  getByPendingPhone: async (phone: string) => {
+    return (
+      await db
+        .select()
+        .from(userPendingUpdates)
+        .where(eq(userPendingUpdates.phone, phone))
+    )[0];
+  },
+
+  getByPendingIdNumber: async (idNumber: string) => {
+    return (
+      await db
+        .select()
+        .from(userPendingUpdates)
+        .where(eq(userPendingUpdates.idNumber, idNumber))
+    )[0];
+  },
+
+  getPendingUpdateById: async (userId: string) => {
+    return (
+      await db
+        .select()
+        .from(userPendingUpdates)
+        .where(eq(userPendingUpdates.userId, userId))
     )[0];
   },
 
@@ -45,6 +77,24 @@ const UserRepository = {
     });
   },
 
+  pendingUpdate: async (
+    userId: string,
+    name: string,
+    phone: string,
+    profileImgUrl: string | null | undefined,
+    idNumber: string | null | undefined,
+    dateOfBirth: string | null | undefined,
+  ) => {
+    await db.insert(userPendingUpdates).values({
+      userId,
+      name,
+      phone,
+      profileImgUrl,
+      idNumber,
+      dateOfBirth,
+    });
+  },
+
   update: async (
     userId: string,
     name: string | undefined,
@@ -59,6 +109,12 @@ const UserRepository = {
       .update(users)
       .set({ name, phone, profileImgUrl, idNumber, dateOfBirth, email, status })
       .where(eq(users.userId, userId));
+  },
+
+  deletePendingUpdate: async (userId: string) => {
+    await db
+      .delete(userPendingUpdates)
+      .where(eq(userPendingUpdates.userId, userId));
   },
 };
 

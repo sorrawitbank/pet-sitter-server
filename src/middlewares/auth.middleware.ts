@@ -1,5 +1,10 @@
 import { NextFunction, Request, Response } from "express";
-import { LoginBody, RegisterBody, ResetPasswordBody } from "../types/auth";
+import {
+  ChangeEmailBody,
+  LoginBody,
+  RegisterBody,
+  ResetPasswordBody,
+} from "../types/auth";
 import { USER_ROLES } from "../types/user";
 import { emailRegex, phoneRegex } from "../utils/regex";
 
@@ -142,6 +147,44 @@ const AuthMiddleware = {
     if (newPassword.length < 12) {
       return res.status(400).json({
         error: "New password must be at least 12 characters long",
+      });
+    }
+
+    next();
+  },
+
+  changEmail: (
+    req: Request<{}, {}, Partial<ChangeEmailBody>>,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    if (!req.body) {
+      return res.status(400).json({ error: "Body is required" });
+    }
+
+    const { email, password } = req.body;
+
+    // Check for required fields
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    if (!password) {
+      return res.status(400).json({ error: "Password is required" });
+    }
+
+    // Type validations
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: "Invalid email address" });
+    }
+
+    if (typeof password !== "string") {
+      return res.status(400).json({ error: "Password must be a string" });
+    }
+
+    if (password.length < 12) {
+      return res.status(400).json({
+        error: "Password must be at least 12 characters long",
       });
     }
 

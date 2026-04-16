@@ -2,7 +2,12 @@ import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import AuthService from "../services/auth.service";
 import SitterService from "../services/sitter.service";
-import { LoginBody, RegisterBody, ResetPasswordBody } from "../types/auth";
+import {
+  ChangeEmailBody,
+  LoginBody,
+  RegisterBody,
+  ResetPasswordBody,
+} from "../types/auth";
 
 const AuthController = {
   register: async (req: Request<{}, {}, RegisterBody>, res: Response) => {
@@ -117,6 +122,34 @@ const AuthController = {
     }
 
     return res.status(200).json({ message: "Password reset successfully" });
+  },
+
+  changeEmail: async (req: Request<{}, {}, ChangeEmailBody>, res: Response) => {
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+
+    const { email: newEmail, password } = req.body;
+
+    try {
+      const user = await AuthService.getUser(token);
+
+      await AuthService.changeEmail(user.data.user.email!, newEmail, password);
+    } catch (error) {
+      // Client error from service
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    return res.status(200).json({
+      message:
+        "Changed email successfully. Please check mail in your new email for verification.",
+    });
   },
 };
 

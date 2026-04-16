@@ -41,7 +41,7 @@ ChatRoute.post(
   [
     ProtectMiddleware.ownerOrSitter,
     ChatMiddleware.conversationIdParam,
-    UploadMiddleware.image.single("image"),
+    UploadMiddleware.singleImage("image"),
     UploadMiddleware.requireFile("image"),
   ],
   ChatController.uploadConversationImage,

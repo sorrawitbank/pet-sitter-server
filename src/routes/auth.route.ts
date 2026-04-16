@@ -16,4 +16,10 @@ AuthRoute.put(
   AuthController.resetPassword,
 );
 
+AuthRoute.patch(
+  "/change-email",
+  [AuthMiddleware.changEmail],
+  AuthController.changeEmail,
+);
+
 export default AuthRoute;

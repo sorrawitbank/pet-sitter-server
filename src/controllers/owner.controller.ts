@@ -4,8 +4,8 @@ import AuthService from "../services/auth.service";
 import UserService from "../services/user.service";
 import { UpdateUserBody } from "../types/user";
 
-const UserController = {
-  updateUser: async (req: Request<{}, {}, { body: string }>, res: Response) => {
+const OwnerController = {
+  updateOwner: async (req: Request<{}, {}, { body: string }>, res: Response) => {
     const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) {
@@ -14,15 +14,7 @@ const UserController = {
 
     const body: UpdateUserBody = JSON.parse(req.body.body);
 
-    const {
-      name,
-      phone,
-      idNumber,
-      dateOfBirth,
-      email,
-      password,
-      removeProfileImg,
-    } = body;
+    const { name, phone, idNumber, dateOfBirth, removeProfileImg } = body;
 
     const file = req.file;
 
@@ -36,9 +28,6 @@ const UserController = {
         idNumber,
         dateOfBirth,
         undefined,
-        user.data.user.email!,
-        email,
-        password,
         file,
         Boolean(removeProfileImg),
       );
@@ -55,4 +44,4 @@ const UserController = {
   },
 };
 
-export default UserController;
+export default OwnerController;

@@ -19,7 +19,6 @@ const BookingController = {
     try {
       const userId = req.user!.id;
 
-
       const {
         pet_sitter_id,
         contact_name,
@@ -117,12 +116,9 @@ const BookingController = {
       const result = await BookingService.getBookingById(bookingId, userId);
 
       return res.status(200).json(result);
-    } catch (error: any) {
-      if (error.message === "Booking not found") {
-        return res.status(404).json({ message: error.message });
-      }
-      if (error.message.startsWith("Forbidden")) {
-        return res.status(403).json({ message: error.message });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
       }
       return res.status(500).json({ message: "Internal server error" });
     }

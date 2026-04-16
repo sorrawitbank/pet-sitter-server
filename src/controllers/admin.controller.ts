@@ -106,11 +106,11 @@ const AdminController = {
         ? req.query.hasPendingUpdate.toLowerCase() === "true"
           ? true
           : req.query.hasPendingUpdate.toLowerCase() === "false"
-          ? false
-          : Number(req.query.hasPendingUpdate) ||
-            Number(req.query.hasPendingUpdate) === 0
-          ? Boolean(Number(req.query.hasPendingUpdate))
-          : null
+            ? false
+            : Number(req.query.hasPendingUpdate) ||
+                Number(req.query.hasPendingUpdate) === 0
+              ? Boolean(Number(req.query.hasPendingUpdate))
+              : null
         : null;
     let experience: number[] | null;
     let result;
@@ -352,6 +352,10 @@ const AdminController = {
     const sitterId = Number(req.params.sitterId);
 
     try {
+      const sitter = await SitterService.getSitterById(sitterId, false);
+
+      await UserService.approveUpdateUser(sitter.sitter.id);
+
       await SitterService.approveUpdateSitter(sitterId);
     } catch (error) {
       // Client error from service
@@ -373,6 +377,10 @@ const AdminController = {
     const { adminNote } = req.body;
 
     try {
+      const sitter = await SitterService.getSitterById(sitterId, false);
+
+      await UserService.cancelUpdateUser(sitter.sitter.id);
+
       await SitterService.cancelUpdateSitter(sitterId, "admin", adminNote);
     } catch (error) {
       // Client error from service
@@ -390,10 +398,12 @@ const AdminController = {
     const userId = req.params.userId;
 
     try {
-      const role = (await UserService.getUserByUserId(userId)).role;
+      const role = (await UserService.getUserById(userId)).role;
 
       if (role === "sitter") {
-        await SitterService.banSitter(userId);
+        const sitter = await SitterService.getSitterByUserId(userId);
+
+        await SitterService.banSitter(sitter.petSitterId);
       }
 
       await UserService.updateUser(
@@ -403,9 +413,6 @@ const AdminController = {
         undefined,
         undefined,
         "Banned",
-        undefined,
-        undefined,
-        undefined,
         undefined,
       );
     } catch (error) {
@@ -424,10 +431,12 @@ const AdminController = {
     const userId = req.params.userId;
 
     try {
-      const role = (await UserService.getUserByUserId(userId)).role;
+      const role = (await UserService.getUserById(userId)).role;
 
       if (role === "sitter") {
-        SitterService.unbanSitter(userId);
+        const sitter = await SitterService.getSitterByUserId(userId);
+
+        SitterService.unbanSitter(sitter.petSitterId);
       }
 
       await UserService.updateUser(
@@ -437,9 +446,6 @@ const AdminController = {
         undefined,
         undefined,
         "Normal",
-        undefined,
-        undefined,
-        undefined,
         undefined,
       );
     } catch (error) {
@@ -490,9 +496,8 @@ const AdminController = {
   ) => {
     const reportId = req.params.reportId;
     try {
-      const checkingStatusReport = await ReportService.getReportByIdForAdmin(
-        reportId,
-      );
+      const checkingStatusReport =
+        await ReportService.getReportByIdForAdmin(reportId);
       if (checkingStatusReport.data[0]?.status === "New Report") {
         await ReportService.patchReportStatusByIdForAdmin(reportId, "Pending");
       }

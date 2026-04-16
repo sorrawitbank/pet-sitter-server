@@ -1,3 +1,8 @@
+function randomResponse(responses: string[]) {
+  const randomIndex = Math.floor(Math.random() * responses.length);
+  return responses[randomIndex];
+}
+
 const intentResponse = {
   welcome: (language: "th" | "en") => {
     const responses = {
@@ -24,10 +29,7 @@ const intentResponse = {
       ],
     };
 
-    const list = responses[language] || responses.en;
-    const randomIndex = Math.floor(Math.random() * list.length);
-
-    return list[randomIndex];
+    return randomResponse(responses[language] || responses.en);
   },
 
   botCapability: (language: "th" | "en") => {
@@ -55,10 +57,7 @@ const intentResponse = {
       ],
     };
 
-    const list = responses[language] || responses.en;
-    const randomIndex = Math.floor(Math.random() * list.length);
-
-    return list[randomIndex];
+    return randomResponse(responses[language] || responses.en);
   },
 
   searchSitterGeneral: (language: "th" | "en") => {
@@ -86,10 +85,7 @@ const intentResponse = {
       ],
     };
 
-    const list = responses[language] || responses.en;
-    const randomIndex = Math.floor(Math.random() * list.length);
-
-    return list[randomIndex];
+    return randomResponse(responses[language] || responses.en);
   },
 
   thankYou: (language: "th" | "en") => {
@@ -117,10 +113,7 @@ const intentResponse = {
       ],
     };
 
-    const list = responses[language] || responses.en;
-    const randomIndex = Math.floor(Math.random() * list.length);
-
-    return list[randomIndex];
+    return randomResponse(responses[language] || responses.en);
   },
 
   fallback: (language: "th" | "en") => {
@@ -148,10 +141,7 @@ const intentResponse = {
       ],
     };
 
-    const list = responses[language] || responses.en;
-    const randomIndex = Math.floor(Math.random() * list.length);
-
-    return list[randomIndex];
+    return randomResponse(responses[language] || responses.en);
   },
 };
 

@@ -9,7 +9,7 @@ import PaymentRepository from "../repositories/payment.repository";
 const BookingService = {
   createBooking: async (userId: string, data: any) => {
     if (new Date(data.end_time) <= new Date(data.start_time)) {
-      throw new Error("End time must be after start time");
+      throw new AppError(400, "End time must be after start time");
     }
 
     return await BookingRepository.createBooking({

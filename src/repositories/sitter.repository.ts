@@ -246,14 +246,14 @@ const SitterRepository = {
           columns: { imgUrl: true },
           orderBy: [asc(petSitterImages.imageOrder)],
         },
-        province: { columns: { name: true } },
-        district: { columns: { name: true } },
-        subDistrict: { columns: { name: true, postCode: true } },
+        province: { columns: { provinceId: true, name: true } },
+        district: { columns: { districtId: true, name: true } },
+        subDistrict: {
+          columns: { subDistrictId: true, name: true, postCode: true },
+        },
         petSittersPetTypes: {
           columns: {},
-          with: {
-            petType: { columns: { name: true } },
-          },
+          with: { petType: true },
           orderBy: [asc(petTypes.petTypeId)],
         },
       },
@@ -288,6 +288,7 @@ const SitterRepository = {
       with: {
         user: {
           columns: {
+            userId: true,
             name: true,
             phone: true,
             profileImgUrl: true,
