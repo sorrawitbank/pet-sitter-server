@@ -493,6 +493,14 @@ Get a paginated list of approved pet sitters with filters.
 | rating    | number | -        | Integer rating between 1 and 5                                              |
 | experience| string | -        | Range of years, e.g. `1-5` or `10-` (open upper bound)                      |
 | seed      | string | -        | Seed used for ordering; default is current date in `yyyyMMdd` format       |
+| lat       | number | -        | Latitude for location search (`-90` to `90`)                                |
+| lon       | number | -        | Longitude for location search (`-180` to `180`)                              |
+| radius    | number | -        | Search radius in meters, positive number                                     |
+
+Location search rules:
+- If `lat/lon` are omitted, endpoint behavior remains unchanged.
+- If `lat/lon` are provided on page `1` without `radius`, backend auto-expands radius until enough results are found or max radius is reached.
+- For page `2+`, frontend should send the same `radius` used on page `1` to avoid missing or duplicate items.
 
 **Success (200)**
 
@@ -502,6 +510,10 @@ Get a paginated list of approved pet sitters with filters.
   "totalPages": 2,
   "currentPage": 1,
   "limit": 5,
+  "meta": {
+    "radiusUsed": 10000,
+    "hasMore": true
+  },
   "sitters": [
     {
       "id": 1,
@@ -521,6 +533,8 @@ Get a paginated list of approved pet sitters with filters.
   ]
 }
 ```
+
+`meta` is returned only when location search is used (`lat/lon` provided).
 
 **Errors**
 
@@ -1542,6 +1556,14 @@ Endpoints ด้านล่างต้องใช้ token ของ user ท
 | rating    | number | -        | 1–5 (integer)                                    |
 | experience| string | -        | Range เช่น `1-5` หรือ `10-` (เปิดปลาย)           |
 | seed      | string | -        | สำหรับการเรียง (default วันปัจจุบัน yyyyMMdd)     |
+| lat       | number | -        | พิกัดละติจูด (`-90` ถึง `90`)                     |
+| lon       | number | -        | พิกัดลองจิจูด (`-180` ถึง `180`)                   |
+| radius    | number | -        | รัศมีการค้นหา (เมตร), ต้องมากกว่า 0                |
+
+กติกา location search:
+- ถ้าไม่ส่ง `lat/lon` จะทำงานเหมือนเดิมทุกอย่าง
+- ถ้าส่ง `lat/lon` และเป็น `page=1` โดยไม่ส่ง `radius` ระบบจะ auto-expand radius อัตโนมัติ
+- หน้า `2+` ควรส่ง `radius` เดิมที่ได้จากหน้าแรก เพื่อป้องกันข้อมูลซ้ำหรือหาย
 
 **Success (200):**
 
@@ -1551,6 +1573,10 @@ Endpoints ด้านล่างต้องใช้ token ของ user ท
   "totalPages": "number",
   "currentPage": "number",
   "limit": "number",
+  "meta": {
+    "radiusUsed": "number",
+    "hasMore": "boolean"
+  },
   "sitters": [
     {
       "id": "number",
@@ -1567,6 +1593,8 @@ Endpoints ด้านล่างต้องใช้ token ของ user ท
   ]
 }
 ```
+
+`meta` จะถูกส่งกลับเฉพาะตอนที่เป็น location search (`lat/lon` ถูกส่งมา)
 
 **Error:** `400` (query validation), `500`
 

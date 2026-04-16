@@ -26,6 +26,134 @@ import { SitterStatus } from "../types/sitter";
 import { UserStatus } from "../types/user";
 
 const SitterRepository = {
+  getFilterMatchedSitterIds: async (
+    keyword: string | null,
+    petType: string[] | null,
+    rating: number | null,
+    experience: number[] | null,
+    hasPendingUpdate: boolean | null,
+    status: SitterStatus | Extract<UserStatus, "Banned"> | null,
+    canFilterByName: boolean = false,
+    canFilterByEmail: boolean = false,
+  ) => {
+    const filters = [];
+
+    if (keyword) {
+      const keywordFilters = [ilike(petSitters.tradeName, `%${keyword}%`)];
+
+      const sitterIdsByPetTypeKeyword = await db
+        .selectDistinct({ petSitterId: petSittersPetTypes.petSitterId })
+        .from(petSittersPetTypes)
+        .innerJoin(
+          petTypes,
+          eq(petTypes.petTypeId, petSittersPetTypes.petTypeId),
+        )
+        .where(ilike(petTypes.name, `%${keyword}%`));
+
+      const sitterIdsFromPetTypes = sitterIdsByPetTypeKeyword.map(
+        (row) => row.petSitterId,
+      );
+
+      if (sitterIdsFromPetTypes.length > 0) {
+        keywordFilters.push(
+          inArray(petSitters.petSitterId, sitterIdsFromPetTypes),
+        );
+      }
+
+      if (canFilterByName || canFilterByEmail) {
+        const userKeywordConditions = [];
+        if (canFilterByName) {
+          userKeywordConditions.push(ilike(users.name, `%${keyword}%`));
+        }
+        if (canFilterByEmail) {
+          userKeywordConditions.push(ilike(users.email, `%${keyword}%`));
+        }
+        const sitterIdsByUserKeyword = await db
+          .selectDistinct({ petSitterId: petSitters.petSitterId })
+          .from(petSitters)
+          .innerJoin(users, eq(users.userId, petSitters.userId))
+          .where(or(...userKeywordConditions));
+
+        const ids = sitterIdsByUserKeyword.map((row) => row.petSitterId);
+
+        if (ids.length > 0) {
+          keywordFilters.push(inArray(petSitters.petSitterId, ids));
+        }
+      }
+
+      filters.push(or(...keywordFilters));
+    }
+
+    if (petType) {
+      const sitterIdsWithAllPetTypes = await db
+        .select({ petSitterId: petSittersPetTypes.petSitterId })
+        .from(petSittersPetTypes)
+        .innerJoin(
+          petTypes,
+          eq(petTypes.petTypeId, petSittersPetTypes.petTypeId),
+        )
+        .where(inArray(petTypes.name, petType))
+        .groupBy(petSittersPetTypes.petSitterId)
+        .having(eq(countDistinct(petTypes.name), petType.length));
+
+      const sitterIds = sitterIdsWithAllPetTypes.map((row) => row.petSitterId);
+
+      if (!sitterIds.length) {
+        return [];
+      }
+
+      filters.push(inArray(petSitters.petSitterId, sitterIds));
+    }
+
+    if (experience) {
+      filters.push(gte(petSitters.experience, String(experience[0])));
+      if (experience[1] !== Infinity) {
+        filters.push(lte(petSitters.experience, String(experience[1])));
+      }
+    }
+
+    if (typeof hasPendingUpdate === "boolean") {
+      filters.push(eq(petSitters.hasPendingUpdate, hasPendingUpdate));
+    }
+
+    if (status) {
+      if (status === "Banned") {
+        const sitterIdsByBannedStatus = await db
+          .selectDistinct({ petSitterId: petSitters.petSitterId })
+          .from(petSitters)
+          .innerJoin(users, eq(users.userId, petSitters.userId))
+          .where(eq(users.status, "Banned"));
+
+        const ids = sitterIdsByBannedStatus.map((row) => row.petSitterId);
+
+        filters.push(inArray(petSitters.petSitterId, ids));
+      } else {
+        const sitterIdsByBannedStatus = await db
+          .selectDistinct({ petSitterId: petSitters.petSitterId })
+          .from(petSitters)
+          .innerJoin(users, eq(users.userId, petSitters.userId))
+          .where(eq(users.status, "Normal"));
+
+        const ids = sitterIdsByBannedStatus.map((row) => row.petSitterId);
+
+        filters.push(
+          and(
+            inArray(petSitters.petSitterId, ids),
+            eq(petSitters.status, status),
+          ),
+        );
+      }
+    }
+
+    const whereClause = filters.length ? and(...filters) : undefined;
+    const rows = await db
+      .select({ petSitterId: petSitters.petSitterId })
+      .from(petSitters)
+      .where(whereClause);
+
+    return rows.map((row) => row.petSitterId);
+  },
+
   get: async (
     seed: string,
     page: number,
@@ -201,6 +329,118 @@ const SitterRepository = {
     const totalPetSitters = countResult[0].total;
 
     return { result, totalPetSitters };
+  },
+
+  getByLocation: async (
+    page: number,
+    limit: number,
+    keyword: string | null,
+    petType: string[] | null,
+    rating: number | null,
+    experience: number[] | null,
+    hasPendingUpdate: boolean | null,
+    status: SitterStatus | Extract<UserStatus, "Banned"> | null,
+    lat: number,
+    lon: number,
+    radius: number,
+    canFilterByName: boolean = false,
+    canFilterByEmail: boolean = false,
+  ) => {
+    const offset = (page - 1) * limit;
+    const filteredIds = await SitterRepository.getFilterMatchedSitterIds(
+      keyword,
+      petType,
+      rating,
+      experience,
+      hasPendingUpdate,
+      status,
+      canFilterByName,
+      canFilterByEmail,
+    );
+
+    if (!filteredIds.length) {
+      return { result: [], totalPetSitters: 0 };
+    }
+
+    const locationCondition = and(
+      inArray(petSitters.petSitterId, filteredIds),
+      sql`location IS NOT NULL`,
+      sql`ST_DWithin(
+        location::geography,
+        ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography,
+        ${radius}
+      )`,
+    );
+
+    const locationRows = await db
+      .select({ petSitterId: petSitters.petSitterId })
+      .from(petSitters)
+      .where(locationCondition)
+      .orderBy(
+        sql`ST_Distance(
+          location::geography,
+          ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography
+        ) ASC`,
+        sql`${petSitters.ratingAvg} DESC NULLS LAST`,
+        asc(petSitters.petSitterId),
+      )
+      .limit(limit)
+      .offset(offset);
+
+    const countRows = await db
+      .select({ total: count() })
+      .from(petSitters)
+      .where(locationCondition);
+
+    const orderedIds = locationRows.map((row) => row.petSitterId);
+    const totalPetSitters = countRows[0]?.total ?? 0;
+
+    if (!orderedIds.length) {
+      return { result: [], totalPetSitters };
+    }
+
+    const result = await db.query.petSitters.findMany({
+      columns: {
+        petSitterId: true,
+        tradeName: true,
+        latitude: true,
+        longitude: true,
+        ratingAvg: true,
+        hasPendingUpdate: true,
+        status: true,
+      },
+      with: {
+        user: {
+          columns: {
+            name: true,
+            profileImgUrl: true,
+            email: true,
+            status: true,
+          },
+        },
+        petSitterImages: {
+          columns: { imgUrl: true },
+          orderBy: [asc(petSitterImages.imageOrder)],
+        },
+        province: { columns: { name: true } },
+        district: { columns: { name: true } },
+        petSittersPetTypes: {
+          columns: {},
+          with: {
+            petType: { columns: { name: true } },
+          },
+          orderBy: [asc(petTypes.petTypeId)],
+        },
+      },
+      where: inArray(petSitters.petSitterId, orderedIds),
+    });
+
+    const resultMap = new Map(result.map((item) => [item.petSitterId, item]));
+    const orderedResult = orderedIds
+      .map((id) => resultMap.get(id))
+      .filter((item) => item !== undefined);
+
+    return { result: orderedResult, totalPetSitters };
   },
 
   getById: async (sitterId: number, onlyApproved: boolean = true) => {

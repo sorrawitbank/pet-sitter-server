@@ -29,7 +29,8 @@ const SitterMiddleware = {
     res: Response,
     next: NextFunction,
   ) => {
-    const { page, limit, pet_type, rating, experience } = req.query;
+    const { page, limit, pet_type, rating, experience, lat, lon, radius } =
+      req.query;
     const parsedPage = Number(page);
     const parsedlimit = Number(limit);
     const parsedRating = Number(rating);
@@ -76,6 +77,42 @@ const SitterMiddleware = {
       return res.status(400).json({
         error: "Experience must be a range of integers",
       });
+    }
+
+    const hasLat = lat !== undefined;
+    const hasLon = lon !== undefined;
+
+    if (hasLat !== hasLon) {
+      return res.status(400).json({
+        error: "Latitude and longitude must be provided together",
+      });
+    }
+
+    if (hasLat && hasLon) {
+      const parsedLat = Number(lat);
+      const parsedLon = Number(lon);
+
+      if (Number.isNaN(parsedLat) || parsedLat < -90 || parsedLat > 90) {
+        return res.status(400).json({
+          error: "Latitude must be a number between -90 and 90",
+        });
+      }
+
+      if (Number.isNaN(parsedLon) || parsedLon < -180 || parsedLon > 180) {
+        return res.status(400).json({
+          error: "Longitude must be a number between -180 and 180",
+        });
+      }
+    }
+
+    if (radius !== undefined) {
+      const parsedRadius = Number(radius);
+
+      if (Number.isNaN(parsedRadius) || parsedRadius <= 0) {
+        return res.status(400).json({
+          error: "Radius must be a positive number",
+        });
+      }
     }
 
     next();
