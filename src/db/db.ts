@@ -5,7 +5,7 @@ import * as allRelations from "./relations";
 import * as allSchema from "./schema";
 
 if (!process.env.DATABASE_URL) {
-  console.log("DATABASE_URL is not set in environment variables");
+  console.error("DATABASE_URL is not set in environment variables");
   throw new Error("DATABASE_URL is required");
 }
 
