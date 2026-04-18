@@ -6,14 +6,16 @@ const CLIENT_EMAIL =
   "pet-sitter-dialogflow@gen-lang-client-0552269893.iam.gserviceaccount.com";
 
 if (!process.env.DIALOGFLOW_PRIVATE_KEY_ID) {
-  console.log("DIALOGFLOW_PRIVATE_KEY_ID is not set in environment variables");
+  console.error(
+    "DIALOGFLOW_PRIVATE_KEY_ID is not set in environment variables",
+  );
   throw new Error(
     "DIALOGFLOW_PRIVATE_KEY_ID is not set in environment variables.",
   );
 }
 
 if (!process.env.DIALOGFLOW_PRIVATE_KEY) {
-  console.log("DIALOGFLOW_PRIVATE_KEY is not set in environment variables");
+  console.error("DIALOGFLOW_PRIVATE_KEY is not set in environment variables");
   throw new Error(
     "DIALOGFLOW_PRIVATE_KEY is not set in environment variables.",
   );

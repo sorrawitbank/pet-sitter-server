@@ -3,7 +3,7 @@ import axios from "axios";
 import { AskChatbotResponse } from "../../types/chat";
 
 if (!process.env.RAG_SERVICE_URL) {
-  console.log("RAG_SERVICE_URL is not set in environment variables");
+  console.error("RAG_SERVICE_URL is not set in environment variables");
   throw new Error("RAG_SERVICE_URL is required");
 }
 
