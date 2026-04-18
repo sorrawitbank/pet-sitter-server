@@ -10,7 +10,7 @@ if (!process.env.RAG_SERVICE_URL) {
 const ragClient = {
   askChatbot: async (query: string, topK?: number) => {
     const response = await axios.post<AskChatbotResponse>(
-      `${process.env.RAG_SERVICE_URL}/document/query`,
+      `${process.env.RAG_SERVICE_URL}/api/documents/query`,
       {
         query,
         top_k: topK,
