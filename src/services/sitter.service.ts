@@ -17,85 +17,6 @@ const DEFAULT_RADIUS = 5000;
 const MAX_RADIUS = 100000;
 const MIN_RESULTS = 5;
 
-export async function getSittersByLocation(
-  page: number,
-  limit: number,
-  keyword: string | null,
-  petType: string[] | null,
-  rating: number | null,
-  experience: number[] | null,
-  hasPendingUpdate: boolean | null,
-  status: SitterStatus | Extract<UserStatus, "Banned"> | null,
-  lat: number,
-  lon: number,
-  radius: number | null,
-  canFilterByName: boolean = false,
-  canFilterByEmail: boolean = false,
-) {
-  let radiusUsed = radius ?? DEFAULT_RADIUS;
-  let result = await SitterRepository.getByLocation(
-    page,
-    limit,
-    keyword,
-    petType,
-    rating,
-    experience,
-    hasPendingUpdate,
-    status,
-    lat,
-    lon,
-    radiusUsed,
-    canFilterByName,
-    canFilterByEmail,
-  );
-
-  if (!radius && page === 1) {
-    while (radiusUsed < MAX_RADIUS && result.totalPetSitters < MIN_RESULTS) {
-      radiusUsed = Math.min(radiusUsed * 2, MAX_RADIUS);
-      result = await SitterRepository.getByLocation(
-        page,
-        limit,
-        keyword,
-        petType,
-        rating,
-        experience,
-        hasPendingUpdate,
-        status,
-        lat,
-        lon,
-        radiusUsed,
-        canFilterByName,
-        canFilterByEmail,
-      );
-    }
-  }
-
-  return {
-    totalPetSitters: result.totalPetSitters,
-    totalPages: Math.ceil(result.totalPetSitters / limit),
-    petSitters: result.result.map((petSitter) => ({
-      ...petSitter,
-      sitter: {
-        name: petSitter.user.name,
-        profileImgUrl: petSitter.user.profileImgUrl,
-        email: petSitter.user.email,
-        status: petSitter.user.status,
-      },
-      petSitterImage: petSitter.petSitterImages[0]?.imgUrl ?? null,
-      petTypes: petSitter.petSittersPetTypes.map(
-        (petSitterPetType) => petSitterPetType.petType.name,
-      ),
-      province: petSitter.province?.name ?? null,
-      district: petSitter.district?.name ?? null,
-      latitude: petSitter.latitude ? Number(petSitter.latitude) : null,
-      longitude: petSitter.longitude ? Number(petSitter.longitude) : null,
-      ratingAvg: petSitter.ratingAvg ? Number(petSitter.ratingAvg) : null,
-    })),
-    radiusUsed,
-    hasMore: page * limit < result.totalPetSitters,
-  };
-}
-
 const SitterService = {
   getSitters: async (
     seed: string,
@@ -148,7 +69,84 @@ const SitterService = {
     };
   },
 
-  getSittersByLocation,
+  getSittersByLocation: async (
+    page: number,
+    limit: number,
+    keyword: string | null,
+    petType: string[] | null,
+    rating: number | null,
+    experience: number[] | null,
+    hasPendingUpdate: boolean | null,
+    status: SitterStatus | Extract<UserStatus, "Banned"> | null,
+    lat: number,
+    lon: number,
+    radius: number | null,
+    canFilterByName: boolean = false,
+    canFilterByEmail: boolean = false,
+  ) => {
+    let radiusUsed = radius ?? DEFAULT_RADIUS;
+    let result = await SitterRepository.getByLocation(
+      page,
+      limit,
+      keyword,
+      petType,
+      rating,
+      experience,
+      hasPendingUpdate,
+      status,
+      lat,
+      lon,
+      radiusUsed,
+      canFilterByName,
+      canFilterByEmail,
+    );
+
+    if (!radius && page === 1) {
+      while (radiusUsed < MAX_RADIUS && result.totalPetSitters < MIN_RESULTS) {
+        radiusUsed = Math.min(radiusUsed * 2, MAX_RADIUS);
+        result = await SitterRepository.getByLocation(
+          page,
+          limit,
+          keyword,
+          petType,
+          rating,
+          experience,
+          hasPendingUpdate,
+          status,
+          lat,
+          lon,
+          radiusUsed,
+          canFilterByName,
+          canFilterByEmail,
+        );
+      }
+    }
+
+    return {
+      totalPetSitters: result.totalPetSitters,
+      totalPages: Math.ceil(result.totalPetSitters / limit),
+      petSitters: result.result.map((petSitter) => ({
+        ...petSitter,
+        sitter: {
+          name: petSitter.user.name,
+          profileImgUrl: petSitter.user.profileImgUrl,
+          email: petSitter.user.email,
+          status: petSitter.user.status,
+        },
+        petSitterImage: petSitter.petSitterImages[0]?.imgUrl ?? null,
+        petTypes: petSitter.petSittersPetTypes.map(
+          (petSitterPetType) => petSitterPetType.petType.name,
+        ),
+        province: petSitter.province?.name ?? null,
+        district: petSitter.district?.name ?? null,
+        latitude: petSitter.latitude ? Number(petSitter.latitude) : null,
+        longitude: petSitter.longitude ? Number(petSitter.longitude) : null,
+        ratingAvg: petSitter.ratingAvg ? Number(petSitter.ratingAvg) : null,
+      })),
+      radiusUsed,
+      hasMore: page * limit < result.totalPetSitters,
+    };
+  },
 
   getSitterById: async (sitterId: number, onlyApproved: boolean = true) => {
     const result = await SitterRepository.getById(sitterId, onlyApproved);

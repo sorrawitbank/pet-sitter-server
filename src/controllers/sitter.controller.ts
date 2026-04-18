@@ -2,9 +2,7 @@ import { format } from "date-fns";
 import { Request, Response } from "express";
 import AppError from "../errors/AppError";
 import AuthService from "../services/auth.service";
-import SitterService, {
-  getSittersByLocation,
-} from "../services/sitter.service";
+import SitterService from "../services/sitter.service";
 import UserService from "../services/user.service";
 import {
   GetSittersQuery,
@@ -32,9 +30,10 @@ const SitterController = {
     let experience: number[] | null;
     let result:
       | Awaited<ReturnType<typeof SitterService.getSitters>>
-      | Awaited<ReturnType<typeof getSittersByLocation>>;
-    let locationMeta: Awaited<ReturnType<typeof getSittersByLocation>> | null =
-      null;
+      | Awaited<ReturnType<typeof SitterService.getSittersByLocation>>;
+    let locationMeta: Awaited<
+      ReturnType<typeof SitterService.getSittersByLocation>
+    > | null = null;
 
     if (req.query.experience) {
       experience = req.query.experience.split("-").map(Number);
@@ -61,7 +60,7 @@ const SitterController = {
           "Approved",
         );
       } else {
-        locationMeta = await getSittersByLocation(
+        locationMeta = await SitterService.getSittersByLocation(
           page,
           limit,
           keyword,
@@ -76,8 +75,7 @@ const SitterController = {
         );
         result = locationMeta;
       }
-    } catch (error) {
-      console.error("getSitters failed", error);
+    } catch {
       return res.status(500).json({ error: "Internal server error" });
     }
 
