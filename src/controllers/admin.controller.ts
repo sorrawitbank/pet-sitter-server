@@ -207,9 +207,12 @@ const AdminController = {
   ) => {
     const sitterId = Number(req.params.sitterId);
     let result;
+    let user;
 
     try {
       result = await SitterService.getPendingUpdateSitterById(sitterId);
+
+      user = await UserService.getPendingUpdateUserById(result.userId);
     } catch (error) {
       // Client error from service
       if (error instanceof AppError) {
@@ -219,8 +222,11 @@ const AdminController = {
       return res.status(500).json({ error: "Internal server error" });
     }
 
+    const { name, phone, profileImgUrl, idNumber, dateOfBirth } = user;
+
     const sitterResponse = {
       id: result.petSitterId,
+      sitter: { name, phone, profileImgUrl, idNumber, dateOfBirth },
       imgUrls: result.petSitterImages,
       tradeName: result.tradeName,
       experience: result.experience,
@@ -496,8 +502,9 @@ const AdminController = {
   ) => {
     const reportId = req.params.reportId;
     try {
-      const checkingStatusReport =
-        await ReportService.getReportByIdForAdmin(reportId);
+      const checkingStatusReport = await ReportService.getReportByIdForAdmin(
+        reportId,
+      );
       if (checkingStatusReport.data[0]?.status === "New Report") {
         await ReportService.patchReportStatusByIdForAdmin(reportId, "Pending");
       }

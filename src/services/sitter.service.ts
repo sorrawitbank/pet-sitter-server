@@ -226,8 +226,15 @@ const SitterService = {
       throw new AppError(404, "Sitter not found for this pending update");
     }
 
+    const sitter = await SitterRepository.getById(sitterId, false);
+
+    if (!sitter) {
+      throw new AppError(404, "Sitter not found");
+    }
+
     return {
       ...result,
+      userId: sitter.user.userId,
       petSitterImages: result.petSitterImagePendingUpdates.map(
         (petSitterImage) => petSitterImage.imgUrl,
       ),
