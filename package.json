@@ -1,7 +1,6 @@
 {
   "name": "pet-sitter-server",
   "version": "1.0.0",
-  "description": "",
   "main": "dist/app.js",
   "scripts": {
     "build": "tsc",
@@ -9,8 +8,6 @@
     "start": "node dist/server.js",
     "drizzle:pull": "drizzle-kit pull"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
