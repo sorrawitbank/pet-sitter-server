@@ -36,12 +36,6 @@ AdminRoute.get(
 );
 
 AdminRoute.get(
-  "/pet-sitter/:sitterId",
-  [SitterMiddleware.sitterId, ProtectMiddleware.admin],
-  AdminController.getSitterById,
-);
-
-AdminRoute.get(
   "/pet-sitter/pending-update/:sitterId",
   [SitterMiddleware.sitterId, ProtectMiddleware.admin],
   AdminController.getPendingUpdateSitterById,
@@ -71,6 +65,12 @@ AdminRoute.get(
     ProtectMiddleware.admin,
   ],
   AdminController.getReviewsBySitterId,
+);
+
+AdminRoute.get(
+  "/pet-sitter/:sitterId",
+  [SitterMiddleware.sitterId, ProtectMiddleware.admin],
+  AdminController.getSitterById,
 );
 
 AdminRoute.get(
