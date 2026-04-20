@@ -1059,13 +1059,38 @@ Get owner detail by `userId`.
 
 **Success (200)**
 
-Returns owner profile detail including owned pets list.
+```json
+{
+  "id": "uuid",
+  "name": "string",
+  "phone": "string",
+  "profileImgUrl": "string | null",
+  "idNumber": "string | null",
+  "dateOfBirth": "string | null",
+  "email": "string",
+  "status": "Normal",
+  "pets": [
+    {
+      "id": 1,
+      "imgUrl": "string",
+      "petName": "string",
+      "petType": "string",
+      "sex": "Male",
+      "breed": "string",
+      "dateOfBirth": "YYYY-MM-DD",
+      "color": "string",
+      "weight": "12.5",
+      "about": "string | null"
+    }
+  ]
+}
+```
 
 **Errors**
 
 - `400` - `"Invalid user ID"`
 - `401` - Missing or invalid token
-- `404` - Owner not found
+- `404` - `"Owner not found"`
 - `500` - `"Internal server error"`
 
 ---
@@ -1129,29 +1154,71 @@ Get paginated sitter list for admin management.
 
 ---
 
-### GET /api/admin/pet-sitter/:sitterId
-
-Get sitter detail (including status and admin note).
-
 ### GET /api/admin/pet-sitter/pending-update/:sitterId
 
-Get pending update payload for a sitter.
+Get pending sitter profile update. Loads sitter pending data and **pending user profile** fields (`name`, `phone`, `profileImgUrl`, `idNumber`, `dateOfBirth`) from the user pending-update row.
+
+**Path params**
+
+| Field    | Type   | Required | Constraints      |
+| -------- | ------ | -------- | ---------------- |
+| sitterId | number | yes      | Positive integer |
+
+**Success (200)**
+
+```json
+{
+  "id": 1,
+  "sitter": {
+    "name": "string",
+    "phone": "string",
+    "profileImgUrl": "string | null",
+    "idNumber": "string | null",
+    "dateOfBirth": "string | null"
+  },
+  "imgUrls": [],
+  "tradeName": "string",
+  "experience": 1,
+  "petTypes": ["Dog"],
+  "introduction": "string",
+  "services": "string",
+  "description": "string",
+  "address": "string",
+  "latitude": 13.75,
+  "longitude": 100.5,
+  "province": "string",
+  "district": "string",
+  "subDistrict": "string",
+  "postCode": "string"
+}
+```
+
+**Errors**
+
+- `400` - Invalid `sitterId`
+- `401` - Missing or invalid token
+- `404` - Sitter or pending sitter update not found, or `"User not found for this pending update"` when user pending data is missing
+- `500` - `"Internal server error"`
+
+---
 
 ### GET /api/admin/pet-sitter/bookings/:sitterId
 
-Get paginated booking list of a sitter.
+Get paginated booking list for a sitter.
 
-### GET /api/admin/pet-sitter/reviews/:sitterId
+**Query params**
 
-Get paginated reviews of a sitter.
+| Field | Type   | Required | Notes                                 |
+| ----- | ------ | -------- | ------------------------------------- |
+| page  | number | no       | Positive integer, default `1`         |
+| limit | number | no       | Positive integer <= `20`, default `5` |
 
-For all endpoints above:
+**Errors**
 
-- `sitterId` must be a positive integer (`400` if invalid)
-- pagination query uses `page`/`limit` positive integers (`limit <= 20`)
-- returns `401` when token is missing/invalid
-- returns `404` when sitter/resource is not found
-- returns `500` on internal errors
+- `400` - Invalid `sitterId`
+- `401` - Missing or invalid token
+- `404` - Sitter not found
+- `500` - `"Internal server error"`
 
 ---
 
@@ -1178,9 +1245,42 @@ Returns booking detail and normalized `pets` array.
 
 ---
 
+### GET /api/admin/pet-sitter/reviews/:sitterId
+
+Get paginated reviews for a sitter (same shape as public sitter reviews list: `totalReviews`, `totalPages`, `currentPage`, `limit`, `reviews`).
+
+**Query params**
+
+| Field | Type   | Required | Notes                                 |
+| ----- | ------ | -------- | ------------------------------------- |
+| page  | number | no       | Positive integer, default `1`         |
+| limit | number | no       | Positive integer <= `20`, default `5` |
+
+**Errors**
+
+- `400` - Invalid `sitterId`
+- `401` - Missing or invalid token
+- `404` - Sitter not found
+- `500` - `"Internal server error"`
+
+---
+
+### GET /api/admin/pet-sitter/:sitterId
+
+Get sitter detail (including `hasPendingUpdate`, `status`, and `adminNote`). Same general shape as sitter public profile plus admin fields.
+
+**Errors**
+
+- `400` - Invalid `sitterId`
+- `401` - Missing or invalid token
+- `404` - Sitter not found
+- `500` - `"Internal server error"`
+
+---
+
 ### PATCH /api/admin/pet-sitter/approve/:sitterId
 
-Approve sitter pending update.
+Approve sitter pending update. Commits **pending user** profile fields (name, phone, image, ID, date of birth) from the user pending-update row first, then applies the sitter pending profile.
 
 **Success (200)**
 
@@ -1194,14 +1294,14 @@ Approve sitter pending update.
 
 - `400` - Invalid `sitterId`
 - `401` - Missing or invalid token
-- `404` - Sitter or pending update not found
+- `404` - Sitter not found, sitter pending update not found, or user errors such as `"User not found for this pending update"` / `"User not found"`
 - `500` - `"Internal server error"`
 
 ---
 
 ### PATCH /api/admin/pet-sitter/reject/:sitterId
 
-Reject sitter pending update with admin note.
+Reject sitter pending update with admin note. Discards **pending user** profile changes first, then rejects the sitter pending update and persists `adminNote` on the sitter side.
 
 **Body (JSON)**
 
@@ -1228,7 +1328,7 @@ Reject sitter pending update with admin note.
 **Other errors**
 
 - `401` - Missing or invalid token
-- `404` - Sitter or pending update not found
+- `404` - Sitter not found, sitter pending update not found, or user errors such as `"User not found for this pending update"` / `"User not found"`
 - `500` - `"Internal server error"`
 
 ---
