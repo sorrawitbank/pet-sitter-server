@@ -8,7 +8,7 @@
     "start": "node dist/server.js",
     "drizzle:pull": "drizzle-kit pull"
   },
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "@date-fns/utc": "^2.1.1",
