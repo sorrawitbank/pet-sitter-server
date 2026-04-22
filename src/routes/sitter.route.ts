@@ -30,6 +30,12 @@ SitterRoute.get(
 );
 
 SitterRoute.get(
+  "/bookings/available-hours/:sitterId",
+  [SitterMiddleware.sitterId, BookingMiddleware.getAvailableHoursBooking],
+  BookingController.getAvailableHoursBooking,
+);
+
+SitterRoute.get(
   "/bookings/range",
   [BookingMiddleware.getBookingInRangeQuery, ProtectMiddleware.sitter],
   BookingController.getBookingsInDateRange,
