@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { UTCDate } from "@date-fns/utc";
 import AppError from "../errors/AppError";
 import UserRepository from "../repositories/user.repository";
-import supabaseAdmin from "../supabase/admin";
+import supabaseClient from "../supabase/client";
 import { UserStatus } from "../types/user";
 
 const bucket = "user-assets";
@@ -86,7 +86,7 @@ const UserService = {
         const fileExt = file.mimetype.split("/")[1];
         filePath = `${userId}-${format(now, "yyyyMMddHHmmss")}.${fileExt}`;
 
-        const { error } = await supabaseAdmin.storage
+        const { error } = await supabaseClient.storage
           .from(bucket)
           .upload(filePath, file.buffer, { contentType: file.mimetype });
 
@@ -94,7 +94,7 @@ const UserService = {
           throw error;
         }
 
-        const { data } = supabaseAdmin.storage
+        const { data } = supabaseClient.storage
           .from(bucket)
           .getPublicUrl(filePath);
 
@@ -113,14 +113,14 @@ const UserService = {
       );
 
       if (user.profileImgUrl && (publicUrl || removeProfileImg)) {
-        await supabaseAdmin.storage
+        await supabaseClient.storage
           .from(bucket)
           .remove([user.profileImgUrl.split(`/${bucket}/`)[1]]);
       }
     } catch (error) {
       // Rollback
       if (filePath) {
-        await supabaseAdmin.storage.from(bucket).remove([filePath]);
+        await supabaseClient.storage.from(bucket).remove([filePath]);
       }
 
       throw error;
@@ -147,7 +147,9 @@ const UserService = {
     if (lookupPending) {
       throw new AppError(
         400,
-        `${user.role.slice(0, 1).toUpperCase() + user.role.slice(1)} is already pending update`,
+        `${
+          user.role.slice(0, 1).toUpperCase() + user.role.slice(1)
+        } is already pending update`,
       );
     }
 
@@ -193,7 +195,7 @@ const UserService = {
         const fileExt = file.mimetype.split("/")[1];
         filePath = `${userId}-${format(now, "yyyyMMddHHmmss")}.${fileExt}`;
 
-        const { error } = await supabaseAdmin.storage
+        const { error } = await supabaseClient.storage
           .from(bucket)
           .upload(filePath, file.buffer, { contentType: file.mimetype });
 
@@ -201,7 +203,7 @@ const UserService = {
           throw error;
         }
 
-        const { data } = supabaseAdmin.storage
+        const { data } = supabaseClient.storage
           .from(bucket)
           .getPublicUrl(filePath);
 
@@ -219,7 +221,7 @@ const UserService = {
     } catch (error) {
       // Rollback
       if (filePath) {
-        await supabaseAdmin.storage.from(bucket).remove([filePath]);
+        await supabaseClient.storage.from(bucket).remove([filePath]);
       }
 
       throw error;
@@ -245,7 +247,7 @@ const UserService = {
         : undefined;
 
     if (removedImage) {
-      await supabaseAdmin.storage.from(bucket).remove([removedImage]);
+      await supabaseClient.storage.from(bucket).remove([removedImage]);
     }
 
     await UserRepository.update(
@@ -281,7 +283,7 @@ const UserService = {
         : undefined;
 
     if (removedImage) {
-      await supabaseAdmin.storage.from(bucket).remove([removedImage]);
+      await supabaseClient.storage.from(bucket).remove([removedImage]);
     }
 
     await UserRepository.deletePendingUpdate(userId);

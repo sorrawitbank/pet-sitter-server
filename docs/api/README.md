@@ -406,16 +406,16 @@ Create a new pet for the authenticated owner.
 
 `body` JSON shape:
 
-| Field       | Type   | Required | Constraints                           |
-| ----------- | ------ | -------- | ------------------------------------- |
-| petName     | string | yes      | 2-50 chars, valid name format         |
-| petTypeId   | number | yes      | Must exist in pet types               |
-| sex         | string | yes      | `"Male"` \| `"Female"` \| `"Unknown"` |
-| breed       | string | yes      | 2-100 chars                           |
-| dateOfBirth | string | yes      | Valid date (`YYYY-MM-DD`) in the past |
-| color       | string | yes      | 2-100 chars                           |
-| weight      | number | yes      | `0 <= weight < 1000`, max 2 decimals  |
-| about       | string | no       | 5-500 chars (if provided)             |
+| Field       | Type   | Required | Constraints                             |
+| ----------- | ------ | -------- | --------------------------------------- |
+| petName     | string | yes      | 2-50 chars, valid name format           |
+| petTypeId   | number | yes      | Must exist in pet types                 |
+| sex         | string | yes      | `"Male"` \| `"Female"` \| `"Unknown"`   |
+| breed       | string | yes      | 2-100 chars                             |
+| dateOfBirth | string | yes      | Valid date (`YYYY-MM-DD`) in the past   |
+| color       | string | yes      | 2-100 chars                             |
+| weight      | number | yes      | `0 <= weight < 1000`, max 2 decimals    |
+| about       | string | no       | 5-500 chars (if provided and not empty) |
 
 **Success (201)**
 
