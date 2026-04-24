@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import {
   BookingIdParams,
+  GetAvailableHoursBooking,
   GetBookingsInDateRangeQuery,
   UpdateBookingTimeBody,
   UpdateBookingTimeParams,
@@ -20,6 +21,41 @@ const BookingMiddleware = {
       return res.status(400).json({
         error: "Booking ID must be a positive integer",
       });
+    }
+
+    next();
+  },
+
+  getAvailableHoursBooking: (
+    req: Request<{}, {}, {}, Partial<GetAvailableHoursBooking>>,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const { date, exceptedBookingId } = req.query;
+
+    // Check for required fields
+    if (!date) {
+      return res.status(400).json({ error: "Date is required" });
+    }
+
+    // Type validations
+    if (!dateRegex.test(date)) {
+      return res.status(400).json({ error: "Invalid date" });
+    }
+
+    const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ error: "Invalid date" });
+    }
+
+    if (exceptedBookingId !== undefined) {
+      const parsedBookingId = Number(exceptedBookingId);
+
+      if (!Number.isInteger(parsedBookingId) || parsedBookingId <= 0) {
+        return res.status(400).json({
+          error: "Excepted Booking ID must be a positive integer",
+        });
+      }
     }
 
     next();

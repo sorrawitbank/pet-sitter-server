@@ -1,14 +1,18 @@
 import { Request, Response, NextFunction } from "express";
 import BookingService from "../services/booking.service";
 import AppError from "../errors/AppError";
+import AuthService from "../services/auth.service";
+import SitterService from "../services/sitter.service";
 import {
+  GetAvailableHoursBooking,
   GetBookingListsQuery,
   GetBookingsInDateRangeQuery,
   RequestWithUser,
   UpdateBookingTimeRequest,
 } from "../types/booking";
+import { SitterIdParams } from "../types/sitter";
 import parsePositiveInt from "../utils/parsePositiveInt";
-import AuthService from "../services/auth.service";
+import { formatTime, toThailandDateTime, toUTC7 } from "../utils/time";
 
 const BookingController = {
   createBooking: async (
@@ -138,6 +142,69 @@ const BookingController = {
     }
   },
 
+  getAvailableHoursBooking: async (
+    req: Request<SitterIdParams, {}, {}, GetAvailableHoursBooking>,
+    res: Response,
+  ) => {
+    const sitterId = Number(req.params.sitterId);
+    const { date, exceptedBookingId } = req.query;
+    let result;
+
+    try {
+      const sitter = await SitterService.getSitterById(sitterId);
+
+      result = await BookingService.getBookingLists(sitter.sitter.id, {
+        startDate: toThailandDateTime(date, false),
+        endDate: toThailandDateTime(date, true),
+      });
+    } catch (error) {
+      // Client error from service
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
+
+      return res.status(500).json({ error: "Internal server error" });
+    }
+
+    // Generate all time slots (00:00 - 23:30)
+    const allSlots = [];
+    for (let h = 0; h < 24; h++) {
+      for (let m of [0, 30]) {
+        const hh = String(h).padStart(2, "0");
+        const mm = String(m).padStart(2, "0");
+        allSlots.push(`${hh}:${mm}`);
+      }
+    }
+
+    const unavailable = new Set();
+
+    const activeBookings = result.bookings.filter(
+      (b) =>
+        b.status !== "Canceled" &&
+        (exceptedBookingId === undefined ||
+          b.bookingId !== Number(exceptedBookingId)),
+    );
+
+    for (const booking of activeBookings) {
+      const start = toUTC7(booking.startTime);
+      const end = toUTC7(booking.endTime);
+
+      let current = new Date(start);
+
+      while (current < end) {
+        const timeStr = formatTime(current);
+        unavailable.add(timeStr);
+
+        // add 30 minutes
+        current = new Date(current.getTime() + 30 * 60 * 1000);
+      }
+    }
+
+    const availableSlots = allSlots.filter((slot) => !unavailable.has(slot));
+
+    return res.status(200).json({ availableSlots });
+  },
+
   getBookingsInDateRange: async (
     req: Request<{}, {}, {}, GetBookingsInDateRangeQuery>,
     res: Response,
@@ -150,21 +217,9 @@ const BookingController = {
 
     const { start, end } = req.query;
 
-    const toThailandDateTime = (dateStr: string, isEndOfDay: boolean) => {
-      const time = isEndOfDay ? "23:59:59" : "00:00:00";
-      // Interpret as time in Thailand (UTC+7) then convert to ISO string
-      return new Date(`${dateStr}T${time}+07:00`).toISOString();
-    };
+    const startDate = toThailandDateTime(start, false);
 
-    const startDate =
-      start && typeof start === "string"
-        ? toThailandDateTime(start, false)
-        : undefined;
-
-    const endDate =
-      end && typeof end === "string"
-        ? toThailandDateTime(end, true)
-        : undefined;
+    const endDate = toThailandDateTime(end, true);
 
     let result;
 

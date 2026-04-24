@@ -172,6 +172,10 @@ const PetMiddleware = {
         return res.status(400).json({ error: "About must be a string" });
       }
 
+      if (!about.length) {
+        return next();
+      }
+
       if (about.trim().length < 5) {
         return res.status(400).json({
           error: "About must be at least 5 characters long",
@@ -342,6 +346,10 @@ const PetMiddleware = {
     if (about !== undefined && about !== null) {
       if (typeof about !== "string") {
         return res.status(400).json({ error: "About must be a string" });
+      }
+
+      if (!about.length) {
+        return next();
       }
 
       if (about.trim().length < 5) {

@@ -406,16 +406,16 @@ Create a new pet for the authenticated owner.
 
 `body` JSON shape:
 
-| Field       | Type   | Required | Constraints                           |
-| ----------- | ------ | -------- | ------------------------------------- |
-| petName     | string | yes      | 2-50 chars, valid name format         |
-| petTypeId   | number | yes      | Must exist in pet types               |
-| sex         | string | yes      | `"Male"` \| `"Female"` \| `"Unknown"` |
-| breed       | string | yes      | 2-100 chars                           |
-| dateOfBirth | string | yes      | Valid date (`YYYY-MM-DD`) in the past |
-| color       | string | yes      | 2-100 chars                           |
-| weight      | number | yes      | `0 <= weight < 1000`, max 2 decimals  |
-| about       | string | no       | 5-500 chars (if provided)             |
+| Field       | Type   | Required | Constraints                             |
+| ----------- | ------ | -------- | --------------------------------------- |
+| petName     | string | yes      | 2-50 chars, valid name format           |
+| petTypeId   | number | yes      | Must exist in pet types                 |
+| sex         | string | yes      | `"Male"` \| `"Female"` \| `"Unknown"`   |
+| breed       | string | yes      | 2-100 chars                             |
+| dateOfBirth | string | yes      | Valid date (`YYYY-MM-DD`) in the past   |
+| color       | string | yes      | 2-100 chars                             |
+| weight      | number | yes      | `0 <= weight < 1000`, max 2 decimals    |
+| about       | string | no       | 5-500 chars (if provided and not empty) |
 
 **Success (201)**
 
@@ -881,6 +881,47 @@ Returns paginated data with `totalPages`, `currentPage`, `limit`, `total`, and `
 
 - `401` - Missing or invalid token
 - `403` - `"Forbidden: You do not have pet sitter access"`
+- `500` - `"Internal server error"`
+
+---
+
+### GET /api/pet-sitter/bookings/available-hours/:sitterId
+
+Get available 30-minute time slots for a sitter on a specific date.
+
+**Path params**
+
+| Field    | Type   | Required | Constraints      |
+| -------- | ------ | -------- | ---------------- |
+| sitterId | number | yes      | Positive integer |
+
+**Query params**
+
+| Field             | Type   | Required | Constraints                             |
+| ----------------- | ------ | -------- | --------------------------------------- |
+| date              | string | yes      | Valid date (`YYYY-MM-DD`)               |
+| exceptedBookingId | number | no       | Positive integer (booking id to ignore) |
+
+**Success (200)**
+
+```json
+{
+  "availableSlots": ["00:00", "00:30", "01:00", "01:30"]
+}
+```
+
+`availableSlots` is an array of available time slots in `HH:mm` format.
+
+**Validation errors (400)**
+
+- `"Sitter ID must be a positive integer"`
+- `"Date is required"`
+- `"Invalid date"`
+- `"Excepted Booking ID must be a positive integer"`
+
+**Other errors**
+
+- `404` - `"Sitter not found"`
 - `500` - `"Internal server error"`
 
 ---

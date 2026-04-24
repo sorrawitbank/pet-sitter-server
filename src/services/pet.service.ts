@@ -3,7 +3,7 @@ import { UTCDate } from "@date-fns/utc";
 import AppError from "../errors/AppError";
 import PetRepository from "../repositories/pet.repository";
 import UserRepository from "../repositories/user.repository";
-import supabaseAdmin from "../supabase/admin";
+import supabaseClient from "../supabase/client";
 import { PetSex } from "../types/pet";
 
 const bucket = "pet-assets";
@@ -64,7 +64,7 @@ const PetService = {
         "yyyyMMddHHmmss",
       )}.${fileExt}`;
 
-      const { error } = await supabaseAdmin.storage
+      const { error } = await supabaseClient.storage
         .from(bucket)
         .upload(filePath, file.buffer, { contentType: file.mimetype });
 
@@ -72,7 +72,7 @@ const PetService = {
         throw error;
       }
 
-      const { data } = supabaseAdmin.storage
+      const { data } = supabaseClient.storage
         .from(bucket)
         .getPublicUrl(filePath);
 
@@ -93,7 +93,7 @@ const PetService = {
     } catch (error) {
       // Rollback
       if (filePath) {
-        await supabaseAdmin.storage.from(bucket).remove([filePath]);
+        await supabaseClient.storage.from(bucket).remove([filePath]);
       }
 
       throw error;
@@ -144,7 +144,7 @@ const PetService = {
           "",
         )}-${format(now, "yyyyMMddHHmmss")}.${fileExt}`;
 
-        const { error } = await supabaseAdmin.storage
+        const { error } = await supabaseClient.storage
           .from(bucket)
           .upload(filePath, file.buffer, { contentType: file.mimetype });
 
@@ -152,7 +152,7 @@ const PetService = {
           throw error;
         }
 
-        const { data } = supabaseAdmin.storage
+        const { data } = supabaseClient.storage
           .from(bucket)
           .getPublicUrl(filePath);
 
@@ -173,14 +173,14 @@ const PetService = {
       );
 
       if (publicUrl) {
-        await supabaseAdmin.storage
+        await supabaseClient.storage
           .from(bucket)
           .remove([pet.pets.imgUrl.split(`/${bucket}/`)[1]]);
       }
     } catch (error) {
       // Rollback
       if (filePath) {
-        await supabaseAdmin.storage.from(bucket).remove([filePath]);
+        await supabaseClient.storage.from(bucket).remove([filePath]);
       }
 
       throw error;
@@ -195,7 +195,7 @@ const PetService = {
       throw new AppError(404, "Pet not found or not owned by this owner");
     }
 
-    await supabaseAdmin.storage
+    await supabaseClient.storage
       .from(bucket)
       .remove([
         lookupPets

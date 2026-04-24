@@ -23,6 +23,11 @@ export interface GetBookingListsQuery {
   endDate?: string;
 }
 
+export interface GetAvailableHoursBooking {
+  date: string;
+  exceptedBookingId?: number;
+}
+
 export interface GetBookingsInDateRangeQuery {
   start: string;
   end: string;

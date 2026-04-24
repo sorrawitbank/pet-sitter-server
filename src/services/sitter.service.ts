@@ -5,7 +5,7 @@ import AppError from "../errors/AppError";
 import DocumentRepository from "../repositories/document.repository";
 import PetRepository from "../repositories/pet.repository";
 import SitterRepository from "../repositories/sitter.repository";
-import supabaseAdmin from "../supabase/admin";
+import supabaseClient from "../supabase/client";
 import { DocumentMetadata } from "../types/chat";
 import { SitterStatus } from "../types/sitter";
 import { UserStatus } from "../types/user";
@@ -341,7 +341,7 @@ const SitterService = {
               "yyyyMMddHHmmss",
             )}-${i}.${ext}`;
 
-            const { error } = await supabaseAdmin.storage
+            const { error } = await supabaseClient.storage
               .from(bucket)
               .upload(filePath, file.buffer, {
                 contentType: file.mimetype,
@@ -354,7 +354,7 @@ const SitterService = {
 
             filePaths.push(filePath);
 
-            const { data } = supabaseAdmin.storage
+            const { data } = supabaseClient.storage
               .from(bucket)
               .getPublicUrl(filePath);
 
@@ -385,13 +385,13 @@ const SitterService = {
         longitude !== undefined ? longitude : sitter.longitude,
         provinceId !== undefined
           ? provinceId
-          : (sitter.province?.provinceId ?? null),
+          : sitter.province?.provinceId ?? null,
         districtId !== undefined
           ? districtId
-          : (sitter.district?.districtId ?? null),
+          : sitter.district?.districtId ?? null,
         subDistrictId !== undefined
           ? subDistrictId
-          : (sitter.subDistrict?.subDistrictId ?? null),
+          : sitter.subDistrict?.subDistrictId ?? null,
         finalUrls !== undefined
           ? finalUrls
           : sitter.petSitterImages.map((image) => image.imgUrl),
@@ -418,7 +418,7 @@ const SitterService = {
       );
     } catch (error) {
       if (filePaths.length) {
-        await supabaseAdmin.storage.from(bucket).remove(filePaths);
+        await supabaseClient.storage.from(bucket).remove(filePaths);
       }
 
       throw error;
@@ -468,7 +468,7 @@ const SitterService = {
     );
 
     if (removedImages.length) {
-      await supabaseAdmin.storage.from(bucket).remove(removedImages);
+      await supabaseClient.storage.from(bucket).remove(removedImages);
     }
 
     await SitterRepository.update(
@@ -529,7 +529,7 @@ const SitterService = {
       .map((image) => image.imgUrl.split(`/${bucket}/`)[1]);
 
     if (removedImages.length) {
-      await supabaseAdmin.storage.from(bucket).remove(removedImages);
+      await supabaseClient.storage.from(bucket).remove(removedImages);
     }
 
     await SitterRepository.update(
@@ -553,7 +553,7 @@ const SitterService = {
         : undefined,
       false,
       undefined,
-      cancelBy === "admin" ? (adminNote ?? null) : null,
+      cancelBy === "admin" ? adminNote ?? null : null,
     );
 
     await SitterRepository.deletePendingUpdate(sitterId);
