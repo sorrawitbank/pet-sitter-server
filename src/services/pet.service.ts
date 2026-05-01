@@ -5,6 +5,7 @@ import PetRepository from "../repositories/pet.repository";
 import UserRepository from "../repositories/user.repository";
 import supabaseClient from "../supabase/client";
 import { PetSex } from "../types/pet";
+import sanitizeFilename from "../utils/sanitizeFilename";
 
 const bucket = "pet-assets";
 
@@ -59,7 +60,8 @@ const PetService = {
       // Upload pet image
       const now = new UTCDate();
       const fileExt = file.mimetype.split("/")[1];
-      filePath = `${userId}/${petName.replace(" ", "")}-${format(
+      const sanitizedPetName = sanitizeFilename(petName);
+      filePath = `${userId}/${sanitizedPetName}-${format(
         now,
         "yyyyMMddHHmmss",
       )}.${fileExt}`;
@@ -139,10 +141,13 @@ const PetService = {
       if (file) {
         const now = new UTCDate();
         const fileExt = file.mimetype.split("/")[1];
-        filePath = `${userId}/${(petName ? petName : pet.pets.petName).replace(
-          " ",
-          "",
-        )}-${format(now, "yyyyMMddHHmmss")}.${fileExt}`;
+        const sanitizedPetName = sanitizeFilename(
+          petName ? petName : pet.pets.petName,
+        );
+        filePath = `${userId}/${sanitizedPetName}-${format(
+          now,
+          "yyyyMMddHHmmss",
+        )}.${fileExt}`;
 
         const { error } = await supabaseClient.storage
           .from(bucket)
