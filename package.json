@@ -1,34 +1,45 @@
 {
   "name": "pet-sitter-server",
   "version": "1.0.0",
-  "description": "",
   "main": "dist/app.js",
   "scripts": {
     "build": "tsc",
-    "dev": "nodemon src/app.ts",
-    "start": "node dist/app.js",
+    "dev": "nodemon src/server.ts",
+    "start": "node dist/server.js",
     "drizzle:pull": "drizzle-kit pull"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
+    "@date-fns/utc": "^2.1.1",
+    "@google/genai": "^1.45.0",
+    "@stripe/react-stripe-js": "^5.6.1",
     "@supabase/supabase-js": "^2.97.0",
+    "axios": "^1.13.6",
     "cors": "^2.8.6",
+    "date-fns": "^4.1.0",
+    "dialogflow": "^1.2.0",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
-    "pg": "^8.18.0"
+    "multer": "^2.0.2",
+    "pg": "^8.18.0",
+    "socket.io": "^4.8.3",
+    "stripe": "^20.4.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
+    "@types/dialogflow": "^1.0.0",
     "@types/express": "^5.0.6",
+    "@types/multer": "^2.0.0",
     "@types/node": "^25.2.3",
     "@types/pg": "^8.16.0",
     "drizzle-kit": "^0.31.9",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "ts-node": {
+    "files": true
   }
 }

@@ -7,6 +7,9 @@ dist/
 # Drizzle
 drizzle/
 
+# Document
+.documents/
+
 # Environment variables
 .env
 .env.local
@@ -30,3 +33,6 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Claude
+CLAUDE.md

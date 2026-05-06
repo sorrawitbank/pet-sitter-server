@@ -15,8 +15,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "noUnusedLocals": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
   },
   "include": ["src"]
 }
