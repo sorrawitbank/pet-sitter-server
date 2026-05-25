@@ -12,10 +12,12 @@ import {
 import { UpdateUserBody } from "../types/user";
 
 const SitterController = {
+  // GET /pet-sitter — public list with optional filters and location-based search
   getSitters: async (
     req: Request<{}, {}, {}, GetSittersQuery>,
     res: Response,
   ) => {
+    // Use today's date as default seed to keep randomisation consistent within a day
     const seed = req.query.seed || format(new Date(), "yyyyMMdd");
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 5;
@@ -26,7 +28,8 @@ const SitterController = {
     const lon = req.query.lon !== undefined ? Number(req.query.lon) : null;
     const radius =
       req.query.radius !== undefined ? Number(req.query.radius) : null;
-    const isLocationSearch = lat !== null && lon !== null;
+    const isLocationSearch = lat !== null && lon !== null; // Switch between regular vs geo search
+
     let experience: number[] | null;
     let result:
       | Awaited<ReturnType<typeof SitterService.getSitters>>
@@ -35,6 +38,7 @@ const SitterController = {
       ReturnType<typeof SitterService.getSittersByLocation>
     > | null = null;
 
+    // Parse experience range: "1-5" → [1,5]; "3-" → [3, Infinity] (open-ended)
     if (req.query.experience) {
       experience = req.query.experience.split("-").map(Number);
       if (req.query.experience.endsWith("-")) {
@@ -60,6 +64,7 @@ const SitterController = {
           "Approved",
         );
       } else {
+        // locationMeta kept separately to attach radius/hasMore to response
         locationMeta = await SitterService.getSittersByLocation(
           page,
           limit,
@@ -83,10 +88,10 @@ const SitterController = {
       totalPetSitters: result.totalPetSitters,
       totalPages: result.totalPages,
       currentPage: page,
-      limit: limit,
+      limit,
+      // Strip internal fields — expose only what the client needs
       sitters: result.petSitters.map((petSitter) => {
         const { name, profileImgUrl } = petSitter.sitter;
-
         return {
           id: petSitter.petSitterId,
           sitter: { name, profileImgUrl },
@@ -100,6 +105,7 @@ const SitterController = {
           district: petSitter.district,
         };
       }),
+      // Append location meta only when geo search was used
       ...(isLocationSearch && locationMeta
         ? {
             meta: {
@@ -113,6 +119,7 @@ const SitterController = {
     return res.status(200).json(sittersResponse);
   },
 
+  // GET /pet-sitter/:sitterId — public sitter detail (approved only by default)
   getSitterById: async (req: Request<SitterIdParams>, res: Response) => {
     const sitterId = Number(req.params.sitterId);
     let result;
@@ -120,17 +127,15 @@ const SitterController = {
     try {
       result = await SitterService.getSitterById(sitterId);
     } catch (error) {
-      // Client error from service
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ error: error.message });
       }
-
       return res.status(500).json({ error: "Internal server error" });
     }
 
     const { name, profileImgUrl } = result.sitter;
 
-    const sitterResponse = {
+    return res.status(200).json({
       id: result.petSitterId,
       sitter: { name, profileImgUrl },
       imgUrls: result.petSitterImages,
@@ -149,34 +154,29 @@ const SitterController = {
       district: result.district,
       subDistrict: result.subDistrict,
       postCode: result.postCode,
-    };
-
-    return res.status(200).json(sitterResponse);
+    });
   },
 
+  // GET /pet-sitter/profile — authenticated sitter's own profile (includes private fields)
   getSitterProfile: async (req: Request, res: Response) => {
     const token = req.headers.authorization?.split(" ")[1];
-
-    if (!token) {
+    if (!token)
       return res.status(401).json({ error: "Unauthorized: Token missing" });
-    }
 
     let result;
 
     try {
       const user = await AuthService.getUser(token);
-
       result = await SitterService.getSitterByUserId(user.data.user.id);
     } catch (error) {
-      // Client error from service
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ error: error.message });
       }
-
       return res.status(500).json({ error: "Internal server error" });
     }
 
-    const sitterResponse = {
+    // Includes owner-only fields: hasPendingUpdate, status, adminNote
+    return res.status(200).json({
       id: result.petSitterId,
       sitter: result.sitter,
       imgUrls: result.petSitterImages,
@@ -198,21 +198,19 @@ const SitterController = {
       hasPendingUpdate: result.hasPendingUpdate,
       status: result.status,
       adminNote: result.adminNote,
-    };
-
-    return res.status(200).json(sitterResponse);
+    });
   },
 
+  // PUT /pet-sitter/profile — submit profile update for admin review (multipart/form-data)
   updateSitter: async (
     req: Request<{}, {}, { body: string }>,
     res: Response,
   ) => {
     const token = req.headers.authorization?.split(" ")[1];
-
-    if (!token) {
+    if (!token)
       return res.status(401).json({ error: "Unauthorized: Token missing" });
-    }
 
+    // Body arrives as a JSON string inside the multipart form field
     const body: UpdateUserBody & UpdateSitterBody = JSON.parse(req.body.body);
 
     const {
@@ -236,6 +234,7 @@ const SitterController = {
       existingImages,
     } = body;
 
+    // Multer separates profile picture and gallery into distinct field arrays
     const uploaded = req.files as
       | { profileImage?: Express.Multer.File[]; images?: Express.Multer.File[] }
       | undefined;
@@ -244,9 +243,9 @@ const SitterController = {
 
     try {
       const user = await AuthService.getUser(token);
-
       const sitter = await SitterService.getSitterByUserId(user.data.user.id);
 
+      // Update user fields first (name, phone, profile image, etc.)
       await UserService.pendingUpdateUser(
         user.data.user.id,
         typeof name === "string" ? name.trim() : name,
@@ -258,6 +257,7 @@ const SitterController = {
       );
 
       try {
+        // Update sitter-specific fields; numeric values are cast to string for the service layer
         await SitterService.pendingUpdateSitter(
           sitter.petSitterId,
           typeof experience === "number" ? String(experience) : experience,
@@ -276,75 +276,64 @@ const SitterController = {
           existingImages,
         );
       } catch (error) {
-        // Rollback
+        // Sitter update failed — roll back the user update to keep both in sync
         await UserService.cancelUpdateUser(user.data.user.id);
-
         throw error;
-      }
+      } 
     } catch (error) {
-      // Client error from service
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ error: error.message });
       }
-
       return res.status(500).json({ error: "Internal server error" });
     }
 
     return res.status(200).json({ message: "Updated successfully" });
   },
 
+  // DELETE /pet-sitter/profile/cancel — sitter cancels their own pending update
   cancelUpdateSitter: async (req: Request, res: Response) => {
     const token = req.headers.authorization?.split(" ")[1];
-
-    if (!token) {
+    if (!token)
       return res.status(401).json({ error: "Unauthorized: Token missing" });
-    }
 
     try {
       const user = await AuthService.getUser(token);
-
       const sitter = await SitterService.getSitterByUserId(user.data.user.id);
 
+      // Cancel both halves of the pending update atomically
       await UserService.cancelUpdateUser(user.data.user.id);
-
       await SitterService.cancelUpdateSitter(sitter.petSitterId, "sitter");
     } catch (error) {
-      // Client error from service
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ error: error.message });
       }
-
       return res.status(500).json({ error: "Internal server error" });
     }
 
     return res.status(200).json({ message: "Cancelled successfully" });
   },
 
+  // DELETE /pet-sitter/note — sitter dismisses the admin rejection note from their profile
   deleteAdminReviewSitter: async (req: Request, res: Response) => {
     const token = req.headers.authorization?.split(" ")[1];
-
-    if (!token) {
+    if (!token)
       return res.status(401).json({ error: "Unauthorized: Token missing" });
-    }
 
     try {
       const user = await AuthService.getUser(token);
-
       const sitter = await SitterService.getSitterByUserId(user.data.user.id);
 
       await SitterService.deleteAdminReviewSitter(sitter.petSitterId);
     } catch (error) {
-      // Client error from service
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ error: error.message });
       }
-
       return res.status(500).json({ error: "Internal server error" });
     }
 
-    return res.status(200).json({
-      message: "Deleted Admin Review successfully",
-    });
+    return res
+      .status(200)
+      .json({ message: "Deleted Admin Review successfully" });
   },
 };
 

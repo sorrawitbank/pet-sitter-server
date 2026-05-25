@@ -26,6 +26,8 @@ import { SitterStatus } from "../types/sitter";
 import { UserStatus } from "../types/user";
 
 const SitterRepository = {
+  // Resolves filter params into a list of matching sitter IDs — used by getByLocation
+  // to decouple filter logic from geo/spatial queries
   getFilterMatchedSitterIds: async (
     keyword: string | null,
     petType: string[] | null,
@@ -39,8 +41,10 @@ const SitterRepository = {
     const filters = [];
 
     if (keyword) {
+      // keyword matches tradeName OR pet type name OR (optionally) user name/email
       const keywordFilters = [ilike(petSitters.tradeName, `%${keyword}%`)];
 
+      // Sub-query: sitter IDs whose pet types match the keyword
       const sitterIdsByPetTypeKeyword = await db
         .selectDistinct({ petSitterId: petSittersPetTypes.petSitterId })
         .from(petSittersPetTypes)
@@ -53,21 +57,20 @@ const SitterRepository = {
       const sitterIdsFromPetTypes = sitterIdsByPetTypeKeyword.map(
         (row) => row.petSitterId,
       );
-
       if (sitterIdsFromPetTypes.length > 0) {
         keywordFilters.push(
           inArray(petSitters.petSitterId, sitterIdsFromPetTypes),
         );
       }
 
+      // Admin-only: also search by user name / email
       if (canFilterByName || canFilterByEmail) {
         const userKeywordConditions = [];
-        if (canFilterByName) {
+        if (canFilterByName)
           userKeywordConditions.push(ilike(users.name, `%${keyword}%`));
-        }
-        if (canFilterByEmail) {
+        if (canFilterByEmail)
           userKeywordConditions.push(ilike(users.email, `%${keyword}%`));
-        }
+
         const sitterIdsByUserKeyword = await db
           .selectDistinct({ petSitterId: petSitters.petSitterId })
           .from(petSitters)
@@ -75,7 +78,6 @@ const SitterRepository = {
           .where(or(...userKeywordConditions));
 
         const ids = sitterIdsByUserKeyword.map((row) => row.petSitterId);
-
         if (ids.length > 0) {
           keywordFilters.push(inArray(petSitters.petSitterId, ids));
         }
@@ -85,6 +87,7 @@ const SitterRepository = {
     }
 
     if (petType) {
+      // Require sitter to support ALL requested pet types (not just any one)
       const sitterIdsWithAllPetTypes = await db
         .select({ petSitterId: petSittersPetTypes.petSitterId })
         .from(petSittersPetTypes)
@@ -94,13 +97,10 @@ const SitterRepository = {
         )
         .where(inArray(petTypes.name, petType))
         .groupBy(petSittersPetTypes.petSitterId)
-        .having(eq(countDistinct(petTypes.name), petType.length));
+        .having(eq(countDistinct(petTypes.name), petType.length)); // count = requested length → has all
 
       const sitterIds = sitterIdsWithAllPetTypes.map((row) => row.petSitterId);
-
-      if (!sitterIds.length) {
-        return [];
-      }
+      if (!sitterIds.length) return []; // short-circuit: no sitters match all types
 
       filters.push(inArray(petSitters.petSitterId, sitterIds));
     }
@@ -118,27 +118,33 @@ const SitterRepository = {
 
     if (status) {
       if (status === "Banned") {
+        // "Banned" lives on the user row, not the sitter row — requires a join
         const sitterIdsByBannedStatus = await db
           .selectDistinct({ petSitterId: petSitters.petSitterId })
           .from(petSitters)
           .innerJoin(users, eq(users.userId, petSitters.userId))
           .where(eq(users.status, "Banned"));
 
-        const ids = sitterIdsByBannedStatus.map((row) => row.petSitterId);
-
-        filters.push(inArray(petSitters.petSitterId, ids));
+        filters.push(
+          inArray(
+            petSitters.petSitterId,
+            sitterIdsByBannedStatus.map((r) => r.petSitterId),
+          ),
+        );
       } else {
-        const sitterIdsByBannedStatus = await db
+        // For sitter-level statuses, exclude banned users first then filter by sitter.status
+        const nonBannedIds = await db
           .selectDistinct({ petSitterId: petSitters.petSitterId })
           .from(petSitters)
           .innerJoin(users, eq(users.userId, petSitters.userId))
           .where(eq(users.status, "Normal"));
 
-        const ids = sitterIdsByBannedStatus.map((row) => row.petSitterId);
-
         filters.push(
           and(
-            inArray(petSitters.petSitterId, ids),
+            inArray(
+              petSitters.petSitterId,
+              nonBannedIds.map((r) => r.petSitterId),
+            ),
             eq(petSitters.status, status),
           ),
         );
@@ -154,6 +160,7 @@ const SitterRepository = {
     return rows.map((row) => row.petSitterId);
   },
 
+  // Paginated sitter list with filters; ordered by rating proximity then seeded random
   get: async (
     seed: string,
     page: number,
@@ -170,6 +177,8 @@ const SitterRepository = {
     const offset = (page - 1) * limit;
     const filters = [];
 
+    // (Same filter-building logic as getFilterMatchedSitterIds — duplicated here
+    //  because get() uses Drizzle's relational query API which can't reuse subquery IDs directly)
     if (keyword) {
       const keywordFilters = [ilike(petSitters.tradeName, `%${keyword}%`)];
 
@@ -185,7 +194,6 @@ const SitterRepository = {
       const sitterIdsFromPetTypes = sitterIdsByPetTypeKeyword.map(
         (row) => row.petSitterId,
       );
-
       if (sitterIdsFromPetTypes.length > 0) {
         keywordFilters.push(
           inArray(petSitters.petSitterId, sitterIdsFromPetTypes),
@@ -194,12 +202,11 @@ const SitterRepository = {
 
       if (canFilterByName || canFilterByEmail) {
         const userKeywordConditions = [];
-        if (canFilterByName) {
+        if (canFilterByName)
           userKeywordConditions.push(ilike(users.name, `%${keyword}%`));
-        }
-        if (canFilterByEmail) {
+        if (canFilterByEmail)
           userKeywordConditions.push(ilike(users.email, `%${keyword}%`));
-        }
+
         const sitterIdsByUserKeyword = await db
           .selectDistinct({ petSitterId: petSitters.petSitterId })
           .from(petSitters)
@@ -207,7 +214,6 @@ const SitterRepository = {
           .where(or(...userKeywordConditions));
 
         const ids = sitterIdsByUserKeyword.map((row) => row.petSitterId);
-
         if (ids.length > 0) {
           keywordFilters.push(inArray(petSitters.petSitterId, ids));
         }
@@ -229,10 +235,7 @@ const SitterRepository = {
         .having(eq(countDistinct(petTypes.name), petType.length));
 
       const sitterIds = sitterIdsWithAllPetTypes.map((row) => row.petSitterId);
-
-      if (!sitterIds.length) {
-        return { result: [], totalPetSitters: 0 };
-      }
+      if (!sitterIds.length) return { result: [], totalPetSitters: 0 };
 
       filters.push(inArray(petSitters.petSitterId, sitterIds));
     }
@@ -256,21 +259,25 @@ const SitterRepository = {
           .innerJoin(users, eq(users.userId, petSitters.userId))
           .where(eq(users.status, "Banned"));
 
-        const ids = sitterIdsByBannedStatus.map((row) => row.petSitterId);
-
-        filters.push(inArray(petSitters.petSitterId, ids));
+        filters.push(
+          inArray(
+            petSitters.petSitterId,
+            sitterIdsByBannedStatus.map((r) => r.petSitterId),
+          ),
+        );
       } else {
-        const sitterIdsByBannedStatus = await db
+        const nonBannedIds = await db
           .selectDistinct({ petSitterId: petSitters.petSitterId })
           .from(petSitters)
           .innerJoin(users, eq(users.userId, petSitters.userId))
           .where(eq(users.status, "Normal"));
 
-        const ids = sitterIdsByBannedStatus.map((row) => row.petSitterId);
-
         filters.push(
           and(
-            inArray(petSitters.petSitterId, ids),
+            inArray(
+              petSitters.petSitterId,
+              nonBannedIds.map((r) => r.petSitterId),
+            ),
             eq(petSitters.status, status),
           ),
         );
@@ -306,15 +313,15 @@ const SitterRepository = {
         district: { columns: { name: true } },
         petSittersPetTypes: {
           columns: {},
-          with: {
-            petType: { columns: { name: true } },
-          },
+          with: { petType: { columns: { name: true } } },
           orderBy: [asc(petTypes.petTypeId)],
         },
       },
       where: whereClause,
       orderBy: [
+        // If rating filter is set, sort by closest rating bucket first
         ...(rating ? [sql`ABS(${petSitters.ratingBucket} - ${rating})`] : []),
+        // Seeded random: same seed = same order every page, different seed = shuffled
         sql`md5(${petSitters.petSitterId}::text || ${seed})`,
       ],
       limit,
@@ -326,11 +333,10 @@ const SitterRepository = {
       .from(petSitters)
       .where(whereClause);
 
-    const totalPetSitters = countResult[0].total;
-
-    return { result, totalPetSitters };
+    return { result, totalPetSitters: countResult[0].total };
   },
 
+  // Geo search: filters first, then applies PostGIS distance query on the matched IDs
   getByLocation: async (
     page: number,
     limit: number,
@@ -347,6 +353,8 @@ const SitterRepository = {
     canFilterByEmail: boolean = false,
   ) => {
     const offset = (page - 1) * limit;
+
+    // Step 1: resolve all non-spatial filters to IDs first
     const filteredIds = await SitterRepository.getFilterMatchedSitterIds(
       keyword,
       petType,
@@ -358,10 +366,9 @@ const SitterRepository = {
       canFilterByEmail,
     );
 
-    if (!filteredIds.length) {
-      return { result: [], totalPetSitters: 0 };
-    }
+    if (!filteredIds.length) return { result: [], totalPetSitters: 0 };
 
+    // Step 2: apply PostGIS ST_DWithin to check sitters are within the radius (meters)
     const locationCondition = and(
       inArray(petSitters.petSitterId, filteredIds),
       sql`location IS NOT NULL`,
@@ -372,6 +379,8 @@ const SitterRepository = {
       )`,
     );
 
+    // Step 3: get ordered + paginated IDs only (cheap — no relations loaded yet)
+    // Primary sort: nearest first; secondary: highest rating; tertiary: stable ID tiebreak
     const locationRows = await db
       .select({ petSitterId: petSitters.petSitterId })
       .from(petSitters)
@@ -391,14 +400,12 @@ const SitterRepository = {
       .select({ total: count() })
       .from(petSitters)
       .where(locationCondition);
-
     const orderedIds = locationRows.map((row) => row.petSitterId);
     const totalPetSitters = countRows[0]?.total ?? 0;
 
-    if (!orderedIds.length) {
-      return { result: [], totalPetSitters };
-    }
+    if (!orderedIds.length) return { result: [], totalPetSitters };
 
+    // Step 4: load full relations for the paginated ID slice
     const result = await db.query.petSitters.findMany({
       columns: {
         petSitterId: true,
@@ -426,15 +433,14 @@ const SitterRepository = {
         district: { columns: { name: true } },
         petSittersPetTypes: {
           columns: {},
-          with: {
-            petType: { columns: { name: true } },
-          },
+          with: { petType: { columns: { name: true } } },
           orderBy: [asc(petTypes.petTypeId)],
         },
       },
       where: inArray(petSitters.petSitterId, orderedIds),
     });
 
+    // findMany doesn't preserve inArray order — reconstruct sort order via Map lookup
     const resultMap = new Map(result.map((item) => [item.petSitterId, item]));
     const orderedResult = orderedIds
       .map((id) => resultMap.get(id))
@@ -443,12 +449,10 @@ const SitterRepository = {
     return { result: orderedResult, totalPetSitters };
   },
 
+  // Fetches full sitter detail by ID; hides banned sitters from public view
   getById: async (sitterId: number, onlyApproved: boolean = true) => {
     const filters = [];
-
-    if (onlyApproved) {
-      filters.push(eq(petSitters.status, "Approved"));
-    }
+    if (onlyApproved) filters.push(eq(petSitters.status, "Approved"));
 
     const whereClause = and(eq(petSitters.petSitterId, sitterId), ...filters);
 
@@ -500,13 +504,13 @@ const SitterRepository = {
       where: whereClause,
     });
 
-    if (onlyApproved && result?.user?.status === "Banned") {
-      return null;
-    }
+    // A banned user's sitter record may still exist in DB — suppress it for public access
+    if (onlyApproved && result?.user?.status === "Banned") return null;
 
     return result;
   },
 
+  // Fetches sitter record by the associated user ID (for owner's own profile)
   getByUserId: async (userId: string) => {
     return db.query.petSitters.findFirst({
       columns: {
@@ -557,6 +561,7 @@ const SitterRepository = {
     });
   },
 
+  // Checks if a trade name is taken in the live sitter table
   getByTradeName: async (tradeName: string) => {
     return (
       await db
@@ -566,6 +571,7 @@ const SitterRepository = {
     )[0];
   },
 
+  // Checks if a trade name is taken in pending updates (prevents conflicts before approval)
   getByPendingTradeName: async (tradeName: string) => {
     return (
       await db
@@ -575,6 +581,7 @@ const SitterRepository = {
     )[0];
   },
 
+  // Fetches the pending update snapshot for a sitter (images/pet types from pending tables)
   getPendingUpdateById: async (sitterId: number) => {
     return db.query.petSitterPendingUpdates.findFirst({
       columns: {
@@ -608,6 +615,7 @@ const SitterRepository = {
     });
   },
 
+  // Inserts a pending update record + related pet types + images in a single transaction
   pendingUpdate: async (
     sitterId: number,
     experience: string | null,
@@ -641,15 +649,18 @@ const SitterRepository = {
       });
 
       if (petTypeIds) {
-        await tx.insert(petSittersPetTypesPendingUpdates).values(
-          petTypeIds.map((petTypeId) => ({
-            petSitterId: sitterId,
-            petTypeId,
-          })),
-        );
+        await tx
+          .insert(petSittersPetTypesPendingUpdates)
+          .values(
+            petTypeIds.map((petTypeId) => ({
+              petSitterId: sitterId,
+              petTypeId,
+            })),
+          );
       }
 
       if (imgUrls.length) {
+        // imageOrder preserves display sequence in the pending snapshot
         await tx.insert(petSitterImagePendingUpdates).values(
           imgUrls.map((imgUrl, index) => ({
             petSitterId: sitterId,
@@ -661,6 +672,8 @@ const SitterRepository = {
     });
   },
 
+  // Updates live sitter fields; undefined = leave unchanged, null = clear the value
+  // Pet types and images are replaced wholesale when provided (delete-then-insert)
   update: async (
     sitterId: number,
     experience: string | null | undefined,
@@ -702,21 +715,25 @@ const SitterRepository = {
         .where(eq(petSitters.petSitterId, sitterId));
 
       if (petTypeIds !== undefined) {
+        // Replace all pet types — delete existing then re-insert
         await tx
           .delete(petSittersPetTypes)
           .where(eq(petSittersPetTypes.petSitterId, sitterId));
 
         if (petTypeIds !== null) {
-          await tx.insert(petSittersPetTypes).values(
-            petTypeIds.map((petTypeId) => ({
-              petSitterId: sitterId,
-              petTypeId,
-            })),
-          );
+          await tx
+            .insert(petSittersPetTypes)
+            .values(
+              petTypeIds.map((petTypeId) => ({
+                petSitterId: sitterId,
+                petTypeId,
+              })),
+            );
         }
       }
 
       if (imgUrls) {
+        // Replace all images — delete existing then re-insert with fresh order index
         await tx
           .delete(petSitterImages)
           .where(eq(petSitterImages.petSitterId, sitterId));
@@ -734,6 +751,7 @@ const SitterRepository = {
     });
   },
 
+  // Removes the pending update record (called after approve or cancel)
   deletePendingUpdate: async (sitterId: number) => {
     await db
       .delete(petSitterPendingUpdates)
